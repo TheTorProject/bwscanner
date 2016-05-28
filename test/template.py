@@ -9,6 +9,11 @@ import os
 import random
 
 class TorTestCase(unittest.TestCase):
+    """
+    XXX: Use code from circuit.py for the path selection rather than
+         repeating path selection here.
+    """
+
     @defer.inlineCallbacks
     def setUp(self):
         self.tor = yield build_tor_connection(
@@ -27,9 +32,11 @@ class TorTestCase(unittest.TestCase):
         return [r for r in self.routers if 'exit' in r.flags]
 
     def random_path(self):
-        return [random.choice(self.routers),
-                random.choice(self.routers),
-                random.choice(self.exits)]
+        exit_relay = random.choice(self.exits)
+        selected_relays = random.sample(self.routers, 3)
+        if exit_relay in selected_relays:
+            selected_relays.remove(exit_relay)
+        return selected_relays[0:2] + [exit_relay]
 
     @defer.inlineCallbacks
     def tearDown(self):
