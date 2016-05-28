@@ -45,10 +45,10 @@ class ExitScan(CircuitGenerator):
             """
             for exit_relay in self.exits:
                 # Sample an extra relay in case one of the choices is the exit.
-                candiate_relays = random.sample(self.relays, 3)
-                if exit_relay in candiate_relays:
-                    candiate_relays.remove(exit_relay)
-                yield candiate_relays[0:2] + [exit_relay]
+                candidate_relays = random.sample(self.relays, 3)
+                if exit_relay in candidate_relays:
+                    candidate_relays.remove(exit_relay)
+                yield candidate_relays[0:2] + [exit_relay]
 
         self._circgen = circuit_generator()
 
