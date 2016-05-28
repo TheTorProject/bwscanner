@@ -146,7 +146,8 @@ class ProbeAll2HopCircuits(object):
                                    "info":None})
             return None
         def circuit_build_timeout(f):
-            f.trap(CircuitBuildTimedOutError)
+            # XXX: CircuitBuildTimedOutError doesn't exist?
+            # f.trap(CircuitBuildTimedOutError)
             time_end = self.now()
             self.result_sink.send({"time_start":time_start,
                                    "time_end":time_end,
