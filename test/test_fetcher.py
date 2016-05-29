@@ -29,6 +29,7 @@ class TestOnionRoutedTCPClientEndpoint(TorTestCase):
     @defer.inlineCallbacks
     def test_connect_tcp(self):
         endpoint = random.choice(self.routers)
+        # Connect to a routers OR port as a general TCP connection test
         ore = OnionRoutedTCPClientEndpoint(endpoint.ip, int(endpoint.or_port),
                                            self.tor, self.random_path())
         proto = yield ore.connect(MockProtocol())
@@ -38,10 +39,8 @@ class TestOnionRoutedTCPClientEndpoint(TorTestCase):
     def test_connect_tcp_fail(self):
         ore = OnionRoutedTCPClientEndpoint('127.0.0.1', 3,
                                            self.tor, self.random_path())
-        try:
+        with self.assertRaises(ConnectionRefused):
             yield ore.connect(MockProtocol())
-        except ConnectionRefused:
-            pass
 
 class TestOnionRoutedAgent(TorTestCase):
     @defer.inlineCallbacks
@@ -71,10 +70,8 @@ class TestOnionRoutedAgent(TorTestCase):
                                  state=self.tor)
 
         url = "http://127.0.0.1:{}".format(3)
-        try:
+        with self.assertRaises(ConnectionRefused):
             yield agent.request("GET", url)
-        except ConnectionRefused:
-            pass
 
     @defer.inlineCallbacks
     def tearDown(self):
