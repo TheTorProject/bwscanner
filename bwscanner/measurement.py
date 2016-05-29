@@ -33,7 +33,7 @@ class BwScan(object):
         self.partitions = kwargs.get('partitions', 1)
         self.this_partition = kwargs.get('this_partition', 0)
         self.scan_continuous = kwargs.get('scan_continuous', False)
-        self.circuit_lifetime = kwargs.get('circuit_lifetime', 20)
+        self.circuit_lifetime = kwargs.get('circuit_lifetime', 60)
         self.circuit_launch_delay = kwargs.get('circuit_launch_delay', .2)
 
 
@@ -70,16 +70,23 @@ class BwScan(object):
         self.circuits = TwoHop(self.state,
             partitions=self.partitions, this_partition=self.this_partition)
 
-        def pop():
+        def scan_over_next_circuit():
             try:
                 self.fetch(self.circuits.next())
             except StopIteration:
-                all_done.addCallback(lambda ign: self.result_sink.end_flush())
-                defer.DeferredList(self.tasks).chainDeferred(all_done)
-                self.tasks = []
+                # All circuit measurement tasks have been setup. Now wait for
+                # all tasks to complete before writing results, and firing
+                # the all_done deferred.
+                task_list = defer.DeferredList(self.tasks)
+                task_list.addCallback(lambda _: self.result_sink.end_flush())
+                task_list.chainDeferred(all_done)
             else:
-                self.clock.callLater(self.circuit_launch_delay, pop)
-        self.clock.callLater(0, pop)
+                # We have circuits left, schedule scan on the next circuit
+                self.clock.callLater(self.circuit_launch_delay,
+                                     scan_over_next_circuit)
+
+        # Scan the first circuit
+        self.clock.callLater(0, scan_over_next_circuit)
         return all_done
 
     def fetch(self, path):
@@ -89,6 +96,7 @@ class BwScan(object):
         file_size = self.choose_file_size(path)
         time_start = self.now()
 
+        @defer.inlineCallbacks
         def get_circuit_bw(result):
             time_end = self.now()
             if len(result) < file_size:
@@ -98,10 +106,16 @@ class BwScan(object):
             report['time_start'] = time_start
             report['circ_bw'] = (len(result) * 1000) / (report['time_end'] - report['time_start'])
             report['path'] = [r.id_hex for r in path]
-            report['path_desc_bws'] = [self.get_r_desc_bw(r) for r in path]
-            report['path_ns_bws'] = [self.get_r_ns_bw(r) for r in path]
+
+            # We need to wait for these deferreds to be ready, we can't serialize
+            # deferreds.
+            report['path_desc_bws'] = []
+            report['path_ns_bws'] = []
+            for relay in path:
+                report['path_desc_bws'].append((yield self.get_r_desc_bw(relay)))
+                report['path_ns_bws'].append((yield self.get_r_ns_bw(relay)))
             report['path_bws'] = [r.bandwidth for r in path]
-            return report
+            defer.returnValue(report)
 
         def circ_failure(failure):
             time_end = self.now()
@@ -114,10 +128,13 @@ class BwScan(object):
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        self.clock.callLater(self.circuit_lifetime, request.cancel)
+        timeout_circuit = self.clock.callLater(self.circuit_lifetime, request.cancel)
         request.addCallback(readBody)
         request.addCallbacks(get_circuit_bw, errback=circ_failure)
         request.addCallback(self.result_sink.send)
+
+        # Stop circuit timeout callLater when we have been successful
+        request.addCallback(lambda _: timeout_circuit.cancel())
         self.tasks.append(request)
 
     @defer.inlineCallbacks

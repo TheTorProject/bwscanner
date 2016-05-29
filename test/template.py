@@ -42,5 +42,5 @@ class TorTestCase(unittest.TestCase):
     def tearDown(self):
         yield self.tor.set_attacher(None, reactor)
         yield self.tor.protocol.quit()
-        # seems to leave dirty reactor otherwsie?
+        # seems to leave dirty reactor otherwise?
         yield self.tor.protocol.transport.loseConnection()

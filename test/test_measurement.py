@@ -4,10 +4,10 @@ from twisted.web.server import Site
 from txtorcon.util import available_tcp_port
 from bwscanner.attacher import setconf_fetch_all_descs
 from bwscanner.measurement import BwScan
-from os.path import walk, join
 from test.template import TorTestCase
 from tempfile import mkdtemp
 
+import os
 import json
 from shutil import rmtree
 
@@ -36,21 +36,34 @@ class TestBwscan(TorTestCase):
         self.tmp = mkdtemp()
         scan = BwScan(self.tor, reactor, self.tmp)
         scan.baseurl = 'http://127.0.0.1:{}'.format(self.port)
-        def check_all_routers_measured(_, dirname, fnames):
-            all_done = set([r.id_hex for r in self.routers])
-            measured = set()
-            for fname in fnames:
-                path = join(dirname, fname)
-                with open(path, 'r') as testfile:
-                    for measurement in json.load(testfile):
-                        for router in measurement['path']:
-                            measured.add(str(router))
-            # check that every router has been measured at least once
-            assert measured == all_done
 
-        return scan.run_scan().addCallback(
-            lambda ign: walk(self.tmp, check_all_routers_measured, None)
-            )
+        def check_all_routers_measured(measurement_dir):
+            """
+            Load the measurement files from the tmp directory and confirm
+            we a measurements for every relay.
+            """
+            measurements = []
+            measured_relays = set()
+            all_relays = set([r.id_hex for r in self.routers])
+
+            for filename in os.listdir(measurement_dir):
+                result_path = os.path.join(measurement_dir, filename)
+                with open(result_path, 'r') as result_file:
+                    measurements.extend(json.load(result_file))
+
+            for measurement in measurements:
+                measured_relays.update({str(router) for router in measurement['path']})
+
+            failed_measurements = [measurement for measurement in measurements
+                                   if 'failure' in measurement]
+
+            # check that every router has been measured at least once
+            assert measured_relays == all_relays
+            assert not failed_measurements
+
+        scan = scan.run_scan()
+        scan.addCallback(lambda _: check_all_routers_measured(self.tmp))
+        return scan
 
     @defer.inlineCallbacks
     def tearDown(self):
