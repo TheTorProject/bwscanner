@@ -59,6 +59,14 @@ class CircuitEventListener(CircuitListenerMixin, StreamListenerMixin):
 
 class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
     def __init__(self, state):
+        """
+        Circ BW measures the bytes Tor READs from the client, and the bytes
+        WRITTEN from Tor to the client.
+
+        This is reversed for STEAM_BW events where WRITTEN is the bytes sent
+        from the client across the stream, and READ is the bytes received from
+        the stream.
+        """
         self.state = state
         self.stream_bw_events = dict()
         self.circ_bw_events = dict()
@@ -95,15 +103,17 @@ class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
             self.stream_bw_events[circuit] = [bw_event]
 
     def bw_samples(self, circuit):
+        """
+        Split the bandwidth samples and return each bandwidth measurement
+        per time period between BW events.
+        """
         bws = self.stream_bw_events[circuit][:]
         t_prev, r_prev, w_prev = bws.pop(0)
         while bws:
             t_next, r_next, w_next = bws.pop(0)
             duration = t_next - t_prev
             yield r_prev, w_prev, duration
-            t_prev = t_next
-            r_prev = r_next
-            w_prev = w_next
+            t_prev, r_prev, w_prev = t_next, r_next, w_next
 
     def circ_avg_bw(self, circuit):
         bytes_r_total = 1

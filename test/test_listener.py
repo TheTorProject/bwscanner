@@ -2,6 +2,7 @@ from twisted.internet import defer, reactor
 from twisted.web.client import readBody
 from twisted.web.resource import Resource
 from twisted.web.server import Site
+from twisted.trial.unittest import SkipTest
 from txtorcon.circuit import Circuit
 from txtorcon.util import available_tcp_port
 
@@ -11,6 +12,9 @@ from test.template import TorTestCase
 
 import random
 import time
+
+class NotEnoughMeasurements(SkipTest):
+    pass
 
 class FakeCircuit(Circuit):
     def __init__(self, id=None, state='BOGUS'):
@@ -60,41 +64,53 @@ class TestStreamBandwidthListener(TorTestCase):
         self.site = Site(DummyResource())
         self.test_service = yield reactor.listenTCP(self.port, self.site)
 
+        self.not_enough_measurements = NotEnoughMeasurements(
+            "Not enough measurements to calculate STREAM_BW samples.")
+
     @defer.inlineCallbacks
     def test_circ_bw(self):
         r = yield self.do_fetch()
-        bw_events = self.stream_bandwidth_listener.circ_bw_events[r['circ']]
-        assert len(bw_events) > 0
-        #XXX: why are the counters reversed!?
+        bw_events = self.stream_bandwidth_listener.circ_bw_events.get(r['circ'])
+        assert bw_events
+        #XXX: why are the counters reversed!? -> See StreamBandwidthListener
+        #     docstring.
         #assert self.fetch_size/2 <= sum([x[1] for x in bw_events]) <= self.fetch_size
         assert sum([x[1] for x in bw_events]) <= self.fetch_size
         # either this is backward, or we wrote more bytes than read?!
-        assert sum([x[2] for x in bw_events]) >= sum([x[1] for x in bw_events]) 
+        assert sum([x[2] for x in bw_events]) >= sum([x[1] for x in bw_events])
 
     @defer.inlineCallbacks
     def test_stream_bw(self):
         r = yield self.do_fetch()
-        bw_events = self.stream_bandwidth_listener.stream_bw_events[r['circ']]
-        assert len(bw_events) > 0
+        bw_events = self.stream_bandwidth_listener.stream_bw_events.get(r['circ'])
+        assert bw_events
         assert self.fetch_size/2 <= sum([x[1] for x in bw_events]) <= self.fetch_size
 
     @defer.inlineCallbacks
     def test_bw_samples(self):
         r = yield self.do_fetch()
-        bw_events = self.stream_bandwidth_listener.stream_bw_events[r['circ']]
-        assert len(bw_events) > 0
+        bw_events = self.stream_bandwidth_listener.stream_bw_events.get(r['circ'])
+        assert bw_events
+        # XXX: Where are these self.fetch_size/n magic values coming from?
         assert self.fetch_size/4 <= sum([x[1] for x in bw_events]) <= self.fetch_size
+
+        # XXX: If the measurement happens in under 1 second, we will have one
+        #      STREAM_BW, and will not be able to calculate BW samples.
+        if len(bw_events) == 1: raise self.not_enough_measurements
         bw_samples = [x for x in self.stream_bandwidth_listener.bw_samples(r['circ'])]
+        assert bw_samples
         assert self.fetch_size/2 <= sum([x[0] for x in bw_samples]) <= self.fetch_size
         assert r['duration'] * .5 < sum([x[2] for x in bw_samples]) < r['duration'] * 2
 
     @defer.inlineCallbacks
     def test_circ_avg_bw(self):
         r = yield self.do_fetch()
-        bw_events = self.stream_bandwidth_listener.stream_bw_events[r['circ']]
+        bw_events = self.stream_bandwidth_listener.stream_bw_events.get(r['circ'])
         #XXX: these complete too quickly to sample sufficient bytes...
-        assert len(bw_events) > 0
+        assert bw_events
         assert self.fetch_size/4 <= sum([x[1] for x in bw_events]) <= self.fetch_size
+
+        if len(bw_events) == 1: raise self.not_enough_measurements
         circ_avg_bw = self.stream_bandwidth_listener.circ_avg_bw(r['circ'])
         assert circ_avg_bw != None
         assert circ_avg_bw['path'] == r['circ'].path
@@ -113,6 +129,10 @@ class TestStreamBandwidthListener(TorTestCase):
         assert len(body) == self.fetch_size
         circ = [c for c in self.tor.circuits.values() if c.path == path][0]
         assert isinstance(circ, Circuit)
+
+        # XXX: Wait for circuit to close, then I think we can be sure that
+        #      the BW events have been emitted.
+        yield circ.close(ifUnused=True)
         defer.returnValue({'duration': time.time() - time_start, 'circ': circ})
 
     @defer.inlineCallbacks
