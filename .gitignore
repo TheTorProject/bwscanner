@@ -1,0 +1,4 @@
+*.pyc
+
+.tox/
+_trial_temp/*
