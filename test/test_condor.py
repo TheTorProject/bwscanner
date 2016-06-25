@@ -133,14 +133,17 @@ class PermutationsTests(unittest.TestCase):
             "relay4":FakeRouter(456),
         }
         tor_state = FakeTorState(routers)
-        jenny = FullyConnected(tor_state)
-        results = []
-        for i in jenny:
-            results.append(i)
+        circuit_generator = FullyConnected(tor_state)
+
+        # Use a set for the path so the order does not affect the comparison
+        results = [set(circuit) for circuit in circuit_generator]
+
+        # XXX: Each pairing will only be produced once, the reverse
+        #      pairing will not be created. Is that the correct behaviour?
         self.failUnlessEqual(len(results), 6)
-        self.failUnless((routers["relay1"], routers["relay2"]) in results)
-        self.failUnless((routers["relay2"], routers["relay3"]) in results)
-        self.failUnless((routers["relay1"], routers["relay3"]) in results)
-        self.failUnless((routers["relay1"], routers["relay4"]) in results)
-        self.failUnless((routers["relay2"], routers["relay4"]) in results)
-        self.failUnless((routers["relay3"], routers["relay4"]) in results)
+        self.failUnless({routers["relay1"], routers["relay2"]} in results)
+        self.failUnless({routers["relay1"], routers["relay3"]} in results)
+        self.failUnless({routers["relay1"], routers["relay4"]} in results)
+        self.failUnless({routers["relay2"], routers["relay3"]} in results)
+        self.failUnless({routers["relay2"], routers["relay4"]} in results)
+        self.failUnless({routers["relay3"], routers["relay4"]} in results)

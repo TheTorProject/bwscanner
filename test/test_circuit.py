@@ -41,8 +41,8 @@ class TestCircuitGenerators(TorTestCase):
 
     def test_fully_connected_parts(self):
         n_parts = randint(3, 27)
-        generators = [FullyConnected(self.tor, partitions=n_parts,
-                                     thispartition=i) for i in xrange(n_parts)]
+        generators = [FullyConnected(self.tor, this_partition=i,
+                                     partitions=n_parts) for i in xrange(n_parts)]
         circuits = {}
         for generator in generators:
             expand_circuit_generator(generator, circuits)
