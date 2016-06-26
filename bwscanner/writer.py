@@ -24,32 +24,36 @@ class ResultSink(object):
         self.current_task = defer.succeed(None)
 
     def send(self, res):
-
+        """
+        send returns a deferred which represents our current deferred work chain.
+        No tasks are appended to our deferred chain unless the size of res matches or exceeds
+        the chunk boundary.
+        """
         self.buffer.append(res)
+
+        def write():
+            wf = open(log_path, "w")
+            try:
+                json.dump(chunk, wf, sort_keys=True)
+            finally:
+                wf.close()
+
         # buffer is full, write to disk
-        if len(self.buffer) >= self.chunk_size:
+        while len(self.buffer) >= self.chunk_size:
             chunk = self.buffer[:self.chunk_size]
             self.buffer = self.buffer[self.chunk_size:]
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
 
-            def write():
-                wf = open(log_path, "w")
-                try:
-                    json.dump(chunk, wf, sort_keys=True)
-                finally:
-                    wf.close()
             self.current_task.addCallback(lambda ign: threads.deferToThread(write))
-            return self.current_task
 
         # buffer is not full, return deferred for current batch
         return self.current_task
 
     def end_flush(self):
         """
-        Write buffered contents to disk.
-        There's no need to perform this write
-        in a seperate thread.
+        Return the current deferred work chain.
+        This last write is not performed in separate thread.
         """
         def flush():
             log_path = os.path.join(self.out_dir,
@@ -59,8 +63,10 @@ class ResultSink(object):
                 json.dump(self.buffer, wf, sort_keys=True)
             finally:
                 wf.close()
+
+        def maybe_do_work(result):
+            if len(self.buffer) != 0:
+                flush()
             return None
-        if len(self.buffer) == 0:
-                return defer.succeed(None)
-        else:
-            return threads.deferToThread(flush)
+
+        return self.current_task.addCallback(maybe_do_work)
