@@ -21,41 +21,41 @@ class ResultSink(object):
 
         self.buffer = []
         self.writing = False
-        self.current_task = None
+        self.current_task = defer.succeed(None)
 
     def send(self, res):
+        """
+        send returns a deferred which represents our current deferred work chain.
+        No tasks are appended to our deferred chain unless the size of res matches or exceeds
+        the chunk boundary.
+        """
         self.buffer.append(res)
+
+        def write():
+            wf = open(log_path, "w")
+            try:
+                json.dump(chunk, wf, sort_keys=True)
+            finally:
+                wf.close()
+
         # buffer is full, write to disk
-        if len(self.buffer) >= self.chunk_size:
+        while len(self.buffer) >= self.chunk_size:
             chunk = self.buffer[:self.chunk_size]
             self.buffer = self.buffer[self.chunk_size:]
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
 
-            def write():
-                wf = open(log_path, "w")
-                try:
-                    json.dump(chunk, wf, sort_keys=True)
-                finally:
-                    wf.close()
-            r = threads.deferToThread(write).chainDeferred(self.current_task)
-            self.current_task = None
-            return r
+            self.current_task.addCallback(lambda ign: threads.deferToThread(write))
 
         # buffer is not full, return deferred for current batch
-        if not self.current_task or self.current_task.called:
-            self.current_task = defer.Deferred()
         return self.current_task
 
     def end_flush(self):
         """
-        Write buffered contents to disk.
-        There's no need to perform this write
-        in a seperate thread.
+        Return the current deferred work chain.
+        This last write is not performed in separate thread.
         """
         def flush():
-            if len(self.buffer) == 0:
-                return defer.succeed
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
             wf = open(log_path, "w")
@@ -63,4 +63,10 @@ class ResultSink(object):
                 json.dump(self.buffer, wf, sort_keys=True)
             finally:
                 wf.close()
-        return threads.deferToThread(flush)
+
+        def maybe_do_work(result):
+            if len(self.buffer) != 0:
+                flush()
+            return None
+
+        return self.current_task.addCallback(maybe_do_work)
