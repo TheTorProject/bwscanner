@@ -14,7 +14,7 @@ class ResultSinkTests(unittest.TestCase):
 
     def test_basic(self):
         sink = ResultSink('.', chunk_size=3)
-        d = sink.set_hook("write")
+        d = sink.write_hook()
         sink.send({"meow": 1})
         self.failUnlessEqual(sink.current_log_num, 0)
         sink.send({"meow": 2})
@@ -24,7 +24,7 @@ class ResultSinkTests(unittest.TestCase):
         d.addCallback(lambda ign: self.failUnlessEqual(sink.writing, False))
 
         def send_more(result):
-            d2 = sink.set_hook("write")
+            d2 = sink.write_hook()
             sink.send({"meow": 5})
             sink.send({"meow": 6})
             sink.send({"meow": 7})
