@@ -76,7 +76,6 @@ class FakeTorState(object):
             else:
                 cmd += router.id_hex[1:]
         d = self.protocol.queue_command(cmd)
-        print "d %r" % (d,)
         d.addCallback(self._find_circuit_after_extend)
         return d
 
@@ -104,7 +103,6 @@ class ProbeTests(unittest.TestCase):
         stop_hook = defer.Deferred()
 
         def stopped():
-            print "stopped"
             stop_hook.callback(None)
         probe = ProbeAll2HopCircuits(tor_state, clock, log_dir, stopped)
         probe.run_scan()
