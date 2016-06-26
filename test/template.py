@@ -34,12 +34,10 @@ class TorTestCase(unittest.TestCase):
 
     def random_path(self):
         exit_relay = random.choice(self.exits)
-        non_exits = [r for r in self.routers if 'exit' not in r.flags]
-        if len(non_exits) > 1:
-            return non_exits[0:2] + [exit_relay]
-        else:
-            selected_relays = random.sample(self.routers, 3)
-            return selected_relays
+        selected_relays = random.sample(self.routers, 3)
+        if exit_relay in selected_relays:
+            selected_relays.remove(exit_relay)
+        return selected_relays[0:2] + [exit_relay]
 
     @defer.inlineCallbacks
     def tearDown(self):
