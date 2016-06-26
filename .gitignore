@@ -2,3 +2,8 @@
 
 .tox/
 _trial_temp/*
+*.egg-info
+
+# Code coverage data
+htmlcov/
+.coverage
