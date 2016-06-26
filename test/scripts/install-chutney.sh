@@ -18,7 +18,9 @@ until [ $n -ge 10 ]
 do
   output=$(./chutney verify networks/basic-025)
   # Check if chutney output included 'Transmission: Success'.
-  if ! [[ $output == *"Transmission: Success"* ]]; then
+  if [[ $output == *"Transmission: Success"* ]]; then
+    break
+  else
     n=$[$n+1]
     sleep 5
   fi
