@@ -52,8 +52,6 @@ class ResultSink(object):
         in a seperate thread.
         """
         def flush():
-            if len(self.buffer) == 0:
-                return None
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
             wf = open(log_path, "w")
@@ -62,4 +60,7 @@ class ResultSink(object):
             finally:
                 wf.close()
             return None
-        return threads.deferToThread(flush)
+        if len(self.buffer) == 0:
+                return defer.succeed(None)
+        else:
+            return threads.deferToThread(flush)
