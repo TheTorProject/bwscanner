@@ -1,5 +1,6 @@
 language: python
 sudo: required
+dist: trusty
 env:
   - TOXENV=py27 TEST=functional
 before_install:
