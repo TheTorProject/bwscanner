@@ -9,10 +9,20 @@ cd chutney
 ./chutney start networks/basic-025
 ./chutney status networks/basic-025
 
-# Retry verify until hidden service subsystem is working
+# Retry verify until Tor circuit creation is working
 client_torrc=$(find net/nodes -wholename "*c/torrc" | head -n1)
 control_port=$(grep -Po -m1 "ControlPort\s(\d+)$" $client_torrc | awk '{print $2}')
 export CHUTNEY_CONTROL_PORT="$control_port"
-# How do we know when all has settled?
-sleep 15
+n=0
+until [ $n -ge 10 ]
+do
+  output=$(./chutney verify networks/basic-025)
+  # Check if chutney output included 'Transmission: Success'.
+  if [[ $output == *"Transmission: Success"* ]]; then
+    break
+  else
+    n=$[$n+1]
+    sleep 5
+  fi
+done
 cd ..
