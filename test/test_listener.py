@@ -54,6 +54,7 @@ class TestCircuitEventListener(TorTestCase):
 
 class TestStreamBandwidthListener(TorTestCase):
     skip = "broken tests"
+
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestStreamBandwidthListener, self).setUp()

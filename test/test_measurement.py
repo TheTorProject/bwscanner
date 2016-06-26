@@ -14,6 +14,7 @@ from shutil import rmtree
 
 class TestBwscan(TorTestCase):
     skip = "broken tests"
+
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestBwscan, self).setUp()

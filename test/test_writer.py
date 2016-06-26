@@ -10,6 +10,7 @@ from random import randint
 
 class TestResultSink(unittest.TestCase):
     skip = "broken tests"
+
     def test_send_multiple_chunk_size(self):
         self.tmpdir = mkdtemp()
         chunk_size = 10
