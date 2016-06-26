@@ -21,9 +21,10 @@ class ResultSink(object):
 
         self.buffer = []
         self.writing = False
-        self.current_task = None
+        self.current_task = defer.succeed(None)
 
     def send(self, res):
+
         self.buffer.append(res)
         # buffer is full, write to disk
         if len(self.buffer) >= self.chunk_size:
@@ -38,13 +39,10 @@ class ResultSink(object):
                     json.dump(chunk, wf, sort_keys=True)
                 finally:
                     wf.close()
-            r = threads.deferToThread(write).chainDeferred(self.current_task)
-            self.current_task = None
-            return r
+            self.current_task.addCallback(lambda ign: threads.deferToThread(write))
+            return self.current_task
 
         # buffer is not full, return deferred for current batch
-        if not self.current_task or self.current_task.called:
-            self.current_task = defer.Deferred()
         return self.current_task
 
     def end_flush(self):
@@ -55,7 +53,7 @@ class ResultSink(object):
         """
         def flush():
             if len(self.buffer) == 0:
-                return defer.succeed
+                return None
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
             wf = open(log_path, "w")
@@ -63,4 +61,5 @@ class ResultSink(object):
                 json.dump(self.buffer, wf, sort_keys=True)
             finally:
                 wf.close()
+            return None
         return threads.deferToThread(flush)
