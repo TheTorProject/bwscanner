@@ -1,0 +1,7 @@
+
+Initial squashed git commit 2695cab8d5c1256f9de3b9759641f5b9957a779a
+ - This commit includes code from several contributors:
+ Aaron Gibson - Most of this commit are Aaron's solo coding efforts.
+ Daira Hopwood - Wrote the algorithm for lazily generating tor circuit
+ permutations, with parallelizeable partitioning scheme optimized for low CPU and memory consumption.
+ David Stainton - Wrote the unit tests for tor circuit permutation generator.
