@@ -80,4 +80,7 @@ class TestResultSink(unittest.TestCase):
         return dl
 
     def tearDown(self):
-        rmtree(self.tmpdir)
+        def remove_tree(result):
+            rmtree(self.tmpdir)
+            return result
+        return self.result_sink.current_task.addCallback(remove_tree)
