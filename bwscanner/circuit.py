@@ -4,6 +4,7 @@ Classes used for choosing relay circuit paths
 import operator
 import random
 
+
 class CircuitGenerator(object):
     def __init__(self, state):
         self.state = state
@@ -163,8 +164,10 @@ class FullyConnected(CircuitGenerator):
     def next(self):
         return self._circgen.next()
 
+
 def arbitrary_domain_perm(key, x, n):
     return (x + key) % n
+
 
 def to_pair(x, n):
     """Pick the xth (0-based) pair out of the n*(n-1)/2 possible pairs."""

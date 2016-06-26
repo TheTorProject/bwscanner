@@ -1,15 +1,11 @@
-from twisted.internet import defer, reactor
-from twisted.trial import unittest
+import random
 
-from txtorcon.torconfig import TorConfig
+from twisted.internet import defer, reactor
 from txtorcon.circuit import Circuit
-from txtorcon.torstate import TorState
 from txtorcon.stream import Stream
 
-from bwscanner.attacher import start_tor
+#  from bwscanner.attacher import start_tor
 from test.template import TorTestCase
-
-import random
 
 # class TestLaunchTor(unittest.TestCase):
 #     @defer.inlineCallbacks
@@ -34,6 +30,7 @@ class FakeCircuit(Circuit):
         self.id = id or random.randint(2222, 7777)
         self.state = 'BOGUS'
 
+
 class FakeStream(Stream):
     def __init__(self, id=-999, target_port=9999, target_host='127.0.0.1',
                  source_addr='127.0.0.1', source_port=9999):
@@ -50,6 +47,7 @@ class FakeStream(Stream):
 
     def listen(self, _):
         pass
+
 
 class TestSOCKSClientStreamAttacher(TorTestCase):
     @defer.inlineCallbacks
@@ -95,5 +93,5 @@ class TestSOCKSClientStreamAttacher(TorTestCase):
         circ_callback = defer.Deferred()
         self.attacher.waiting_circuits[circuit.id] = (circuit, circ_callback)
         self.attacher.circuit_failed(circuit, reason="reason")
-        return self.failUnlessFailure(circ_callback, FakeCircuit)\
-                .addCallback(self.failUnlessEqual, circuit)
+        return self.failUnlessFailure(circ_callback, FakeCircuit).addCallback(
+            self.failUnlessEqual, circuit)

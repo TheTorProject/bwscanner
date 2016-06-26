@@ -1,12 +1,13 @@
+import os
+import random
+
 from twisted.internet import defer, reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.trial import unittest
-from txtorcon.torstate import TorState, build_tor_connection
+from txtorcon.torstate import build_tor_connection
 
-from bwscanner.attacher import SOCKSClientStreamAttacher, start_tor
+from bwscanner.attacher import SOCKSClientStreamAttacher
 
-import os
-import random
 
 class TorTestCase(unittest.TestCase):
     """

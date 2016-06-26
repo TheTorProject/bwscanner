@@ -1,13 +1,8 @@
-
-import click
-import sys
 import os.path
-import json # XXX replace with bson
+import json  # XXX replace with bson
 import time
 
-from twisted.internet import defer, reactor, threads
-
-from txtorcon import TorConfig, TorState
+from twisted.internet import defer, threads
 
 from bwscanner.circuit import FullyConnected
 
@@ -53,6 +48,7 @@ class ResultSink(HookMixin):
 
             log_path = os.path.join(self.out_dir, "sink%d.json" % (self.current_log_num,))
             self.current_log_num += 1
+
             def write():
                 wf = open(log_path, "w")
                 try:
@@ -60,11 +56,14 @@ class ResultSink(HookMixin):
                 finally:
                     wf.close()
             self.current_d = threads.deferToThread(write)
+
             def doneWriting(ignore):
                 self.writing = False
                 self._call_hook(True, "write")
+
             def show_fail(f):
                 print "show failure: %r" % (f,)
+
             self.current_d.addCallback(doneWriting)
             self.current_d.addErrback(show_fail)
 
@@ -86,6 +85,7 @@ class ResultSink(HookMixin):
         else:
             flush()
             return defer.succeed(None)
+
 
 class ProbeAll2HopCircuits(object):
 
@@ -115,7 +115,7 @@ class ProbeAll2HopCircuits(object):
         self.tasks = []
 
         # XXX adjust me
-        self.result_sink = ResultSink( log_dir, chunk_size = 1000 )
+        self.result_sink = ResultSink(log_dir, chunk_size=1000)
         self.circuit_life_duration = 10
         self.circuit_build_duration = .2
 
@@ -137,32 +137,36 @@ class ProbeAll2HopCircuits(object):
         and a timeout.
         """
         serialized_route = self.serialize_route(route)
+
         def circuit_build_report(result):
             time_end = self.now()
-            self.result_sink.send({"time_start":time_start,
-                                   "time_end":time_end,
-                                   "path":serialized_route,
-                                   "status":"ok",
-                                   "info":None})
+            self.result_sink.send({"time_start": time_start,
+                                   "time_end": time_end,
+                                   "path": serialized_route,
+                                   "status": "ok",
+                                   "info": None})
             return None
+
         def circuit_build_timeout(f):
             # XXX: CircuitBuildTimedOutError doesn't exist?
             # f.trap(CircuitBuildTimedOutError)
             time_end = self.now()
-            self.result_sink.send({"time_start":time_start,
-                                   "time_end":time_end,
-                                   "path":serialized_route,
-                                   "status":"timeout",
-                                   "info":None})
+            self.result_sink.send({"time_start": time_start,
+                                   "time_end": time_end,
+                                   "path": serialized_route,
+                                   "status": "timeout",
+                                   "info": None})
             return None
+
         def circuit_build_failure(f):
             time_end = self.now()
-            self.result_sink.send({"time_start":time_start,
-                                   "time_end":time_end,
-                                   "path":serialized_route,
-                                   "status":"failure",
-                                   "info":None})
+            self.result_sink.send({"time_start": time_start,
+                                   "time_end": time_end,
+                                   "path": serialized_route,
+                                   "status": "failure",
+                                   "info": None})
             return None
+
         time_start = self.now()
         # XXX build_timeout_circuit doesn't yet exist in upstream txtorcon
         d = self.state.build_circuit(route)

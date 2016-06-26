@@ -7,13 +7,14 @@ from tempfile import mkdtemp
 from bwscanner.writer import ResultSink
 from random import randint
 
+
 class TestResultSink(unittest.TestCase):
 
     def test_send_multiple_chunk_size(self):
         self.tmpdir = mkdtemp()
         chunk_size = 10
         result_sink = ResultSink(self.tmpdir, chunk_size=chunk_size)
-        test_data = {'test_method':'test_send_chunk_size'}
+        test_data = {'test_method': 'test_send_chunk_size'}
         num_chunks = randint(121, 212)
         for _ in xrange(chunk_size*num_chunks):
             result_sink.send(test_data)
@@ -35,7 +36,7 @@ class TestResultSink(unittest.TestCase):
         self.tmpdir = mkdtemp()
         chunk_size = 10
         result_sink = ResultSink(self.tmpdir, chunk_size=chunk_size)
-        test_data = {'test_method':'test_send_chunk_size'}
+        test_data = {'test_method': 'test_send_chunk_size'}
         for _ in xrange(chunk_size):
             result_sink.send(test_data)
 
@@ -56,7 +57,7 @@ class TestResultSink(unittest.TestCase):
         self.tmpdir = mkdtemp()
         chunk_size = 10
         result_sink = ResultSink(self.tmpdir, chunk_size=chunk_size)
-        test_data = {'test_method':'test_end_flush'}
+        test_data = {'test_method': 'test_end_flush'}
         for _ in xrange(chunk_size + 1):
             result_sink.send(test_data)
 

@@ -1,6 +1,6 @@
 from txtorcon import CircuitListenerMixin, StreamListenerMixin
-from bwscanner.writer import ResultSink
 import time
+
 
 class CircuitEventListener(CircuitListenerMixin, StreamListenerMixin):
     def __init__(self, state, result_sink=None):
@@ -10,21 +10,21 @@ class CircuitEventListener(CircuitListenerMixin, StreamListenerMixin):
 
     def circuit_new(self, circuit):
         circuit_new_event = dict(event='circuit_new', time=time.time(),
-            circuit=str(circuit))
+                                 circuit=str(circuit))
         self.circuits[circuit] = [circuit_new_event]
 
     def circuit_launched(self, circuit):
         try:
-            circuit_launched_event = dict(event='circuit_launched',
-                time=time.time(), circuit=str(circuit))
+            circuit_launched_event = dict(event='circuit_launched', time=time.time(),
+                                          circuit=str(circuit))
             self.circuits[circuit].append(circuit_launched_event)
         except KeyError:
             pass
 
     def circuit_extend(self, circuit, router):
         try:
-            circuit_extend_event = dict(event='circuit_extend',
-                time=time.time(), circuit=str(circuit), router=str(router))
+            circuit_extend_event = dict(event='circuit_extend', time=time.time(),
+                                        circuit=str(circuit), router=str(router))
             self.circuits[circuit].append(circuit_extend_event)
         except KeyError:
             pass
@@ -32,15 +32,15 @@ class CircuitEventListener(CircuitListenerMixin, StreamListenerMixin):
     def circuit_built(self, circuit):
         try:
             circuit_built_event = dict(event='circuit_built', time=time.time(),
-                circuit=str(circuit))
+                                       circuit=str(circuit))
             self.circuits[circuit].append(circuit_built_event)
         except KeyError:
             pass
 
     def circuit_closed(self, circuit, **kw):
         try:
-            circuit_closed_event = dict(event='circuit_closed',
-                time=time.time(), circuit=str(circuit), **kw)
+            circuit_closed_event = dict(event='circuit_closed', time=time.time(),
+                                        circuit=str(circuit), **kw)
             self.circuits[circuit].append(circuit_closed_event)
             if self.result_sink:
                 self.result_sink.send(self.circuits.pop(circuit))
@@ -49,13 +49,14 @@ class CircuitEventListener(CircuitListenerMixin, StreamListenerMixin):
 
     def circuit_failed(self, circuit, **kw):
         try:
-            circuit_failed_event = dict(event='circuit_failed',
-                time=time.time(), circuit=str(circuit), **kw)
+            circuit_failed_event = dict(event='circuit_failed', time=time.time(),
+                                        circuit=str(circuit), **kw)
             self.circuits[circuit].append(circuit_failed_event)
             if self.result_sink:
                 self.result_sink.send(self.circuits.pop(circuit))
         except KeyError:
             pass
+
 
 class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
     def __init__(self, state):
@@ -76,7 +77,8 @@ class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
     def circ_bw(self, event):
         event = dict([x.split('=') for x in event.split()])
         now = time.time()
-        circid, bytes_wrote, bytes_read = int(event['ID']), int(event['WRITTEN']), int(event['READ'])
+        circid, bytes_wrote, bytes_read = (int(event['ID']), int(event['WRITTEN']),
+                                           int(event['READ']))
 
         try:
             circuit = self.state.circuits[circid]
@@ -95,7 +97,8 @@ class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
             circuit = self.state.streams[streamid].circuit
         except (KeyError, AttributeError):
             return
-        if not circuit: return
+        if not circuit:
+            return
         bw_event = now, bytes_read, bytes_wrote
         try:
             self.stream_bw_events[circuit].append(bw_event)
@@ -126,7 +129,7 @@ class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
             return None
 
         for r, w, d in self.bw_samples(circuit):
-            #r and w are in units of bytes/second
+            # r and w are in units of bytes/second
             # d is units of second
             r_avg += (r**2)/d
             w_avg += (w**2)/d

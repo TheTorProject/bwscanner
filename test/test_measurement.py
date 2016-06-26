@@ -11,6 +11,7 @@ import os
 import json
 from shutil import rmtree
 
+
 class TestBwscan(TorTestCase):
     @defer.inlineCallbacks
     def setUp(self):
@@ -19,6 +20,7 @@ class TestBwscan(TorTestCase):
 
         class DummyResource(Resource):
             isLeaf = True
+
             def render_GET(self, request):
                 size = request.uri.split('/')[-1]
                 if 'k' in size:

@@ -5,8 +5,10 @@ from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
 
+
 def get_orport_endpoint(tor_state):
     proxy_endpoint = tor_state.protocol.get_conf("SocksPort")
+
     def extract_port_value(result):
         port = result['SocksPort'].split()[0]
         return int(port) if port != 'DEFAULT' else 9050
@@ -14,6 +16,7 @@ def get_orport_endpoint(tor_state):
     proxy_endpoint.addCallback(
         lambda port: TCP4ClientEndpoint(reactor, '127.0.0.1', port))
     return proxy_endpoint
+
 
 @implementer(interfaces.IStreamClientEndpoint)
 class OnionRoutedTCPClientEndpoint(object):
@@ -56,6 +59,7 @@ class OnionRoutedTCPClientEndpoint(object):
 
         return self.or_endpoint.addCallback(_create_circ)
 
+
 class OnionRoutedAgent(Agent):
     _tlsWrapper = TLSWrapClientEndpoint
 
@@ -84,4 +88,3 @@ class OnionRoutedAgent(Agent):
                     "can't figure out how to make a context factory")
             endpoint = self._tlsWrapper(tls_policy, endpoint)
         return endpoint
-
