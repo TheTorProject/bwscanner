@@ -6,10 +6,8 @@ from twisted.internet import defer, threads
 
 from bwscanner.circuit import FullyConnected
 
-from condor_util import HookMixin
 
-
-class ResultSink(HookMixin):
+class ResultSink(object):
     """
     Send results to this sink, they'll eventually be written
     via another thread so as to not block the reactor.
@@ -27,7 +25,14 @@ class ResultSink(HookMixin):
         self.writing = False
         self.current_log_num = 0
         self.current_d = None
-        self._hooks = {'write': None}
+        self.done_writing = defer.Deferred()
+
+    def write_hook(self):
+        """
+        Create a Deferred which is called when writing is finished
+        """
+        self.done_writing = defer.Deferred()
+        return self.done_writing
 
     def send(self, res):
         """
@@ -59,7 +64,7 @@ class ResultSink(HookMixin):
 
             def doneWriting(ignore):
                 self.writing = False
-                self._call_hook(True, "write")
+                self.done_writing.callback(True)
 
             def show_fail(f):
                 print "show failure: %r" % (f,)
