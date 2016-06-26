@@ -7,10 +7,11 @@ from twisted.web.server import Site
 from txsocksx.errors import ConnectionRefused
 from txtorcon.util import available_tcp_port
 
+import random
+
 from bwscanner.fetcher import OnionRoutedTCPClientEndpoint, OnionRoutedAgent
 from test.template import TorTestCase
 
-import random
 
 class MockProtocol(Protocol):
     def __init__(self):
@@ -24,6 +25,7 @@ class MockProtocol(Protocol):
 
     def connectionMade(self):
         self.transport.write("GET / HTTP/1.1\r\n")
+
 
 class TestOnionRoutedTCPClientEndpoint(TorTestCase):
     @defer.inlineCallbacks
@@ -42,12 +44,15 @@ class TestOnionRoutedTCPClientEndpoint(TorTestCase):
         with self.assertRaises(ConnectionRefused):
             yield ore.connect(MockProtocol())
 
+
 class TestOnionRoutedAgent(TorTestCase):
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestOnionRoutedAgent, self).setUp()
+
         class DummyResource(Resource):
             isLeaf = True
+
             def render_GET(self, request):
                 return "%s" % request.method
 

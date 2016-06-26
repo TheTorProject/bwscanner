@@ -1,16 +1,20 @@
-
-# this code was copied from Tahoe-LAFS to help with writing unit tests.
+"""
+This code was copied from Tahoe-LAFS to help with writing unit tests.
+"""
+import os
+import exceptions
+from repr import Repr
 
 from twisted.internet import defer
-#from twisted.python import log
-import exceptions, os
-from repr import Repr
+
 
 class BetterRepr(Repr):
     def __init__(self):
         Repr.__init__(self)
 
-        # Note: These levels can get adjusted dynamically!  My goal is to get more info when printing important debug stuff like exceptions and stack traces and less info when logging normal events.  --Zooko 2000-10-14
+        # Note: These levels can get adjusted dynamically!  My goal is to get more info when
+        # printing important debug stuff like exceptions and stack traces and less info when
+        # logging normal events.  --Zooko 2000-10-14
         self.maxlevel = 6
         self.maxdict = 6
         self.maxlist = 6
@@ -20,18 +24,22 @@ class BetterRepr(Repr):
 
     def repr_function(self, obj, level):
         if hasattr(obj, 'func_code'):
-            return '<' + obj.func_name + '() at ' + os.path.basename(obj.func_code.co_filename) + ':' + str(obj.func_code.co_firstlineno) + '>'
+            return ('<' + obj.func_name + '() at ' +
+                    os.path.basename(obj.func_code.co_filename) + ':' +
+                    str(obj.func_code.co_firstlineno) + '>')
         else:
             return '<' + obj.func_name + '() at (builtin)'
 
     def repr_instance_method(self, obj, level):
         if hasattr(obj, 'func_code'):
-            return '<' + obj.im_class.__name__ + '.' + obj.im_func.__name__ + '() at ' + os.path.basename(obj.im_func.func_code.co_filename) + ':' + str(obj.im_func.func_code.co_firstlineno) + '>'
+            return ('<' + obj.im_class.__name__ + '.' + obj.im_func.__name__ +
+                    '() at ' + os.path.basename(obj.im_func.func_code.co_filename) + ':' +
+                    str(obj.im_func.func_code.co_firstlineno) + '>')
         else:
             return '<' + obj.im_class.__name__ + '.' + obj.im_func.__name__ + '() at (builtin)'
 
     def repr_long(self, obj, level):
-        s = `obj` # XXX Hope this isn't too slow...
+        s = repr(obj)  # XXX Hope this isn't too slow...
         if len(s) > self.maxlong:
             i = max(0, (self.maxlong-3)/2)
             j = max(0, self.maxlong-3-i)
@@ -57,9 +65,11 @@ class BetterRepr(Repr):
             try:
                 if hasattr(obj, 'args'):
                     if len(obj.args) == 1:
-                        return '<' + obj.__class__.__name__ + ': ' + self.repr1(obj.args[0], level-1) + '>'
+                        return ('<' + obj.__class__.__name__ + ': ' +
+                                self.repr1(obj.args[0], level-1) + '>')
                     else:
-                        return '<' + obj.__class__.__name__ + ': ' + self.repr1(obj.args, level-1) + '>'
+                        return ('<' + obj.__class__.__name__ + ': ' +
+                                self.repr1(obj.args, level-1) + '>')
                 else:
                     return '<' + obj.__class__.__name__ + '>'
             finally:
@@ -78,31 +88,37 @@ class BetterRepr(Repr):
         """
         copied from standard repr.py and fixed to work on multithreadedly mutating lists.
         """
-        if level <= 0: return '[...]'
+        if level <= 0:
+            return '[...]'
         n = len(obj)
         myl = obj[:min(n, self.maxlist)]
         s = ''
         for item in myl:
             entry = self.repr1(item, level-1)
-            if s: s = s + ', '
+            if s:
+                s = s + ', '
             s = s + entry
-        if n > self.maxlist: s = s + ', ...'
+        if n > self.maxlist:
+            s = s + ', ...'
         return '[' + s + ']'
 
     def repr_dict(self, obj, level):
         """
         copied from standard repr.py and fixed to work on multithreadedly mutating dicts.
         """
-        if level <= 0: return '{...}'
+        if level <= 0:
+            return '{...}'
         s = ''
         n = len(obj)
         items = obj.items()[:min(n, self.maxdict)]
         items.sort()
         for key, val in items:
             entry = self.repr1(key, level-1) + ':' + self.repr1(val, level-1)
-            if s: s = s + ', '
+            if s:
+                s = s + ', '
             s = s + entry
-        if n > self.maxdict: s = s + ', ...'
+        if n > self.maxdict:
+            s = s + ', ...'
         return '{' + s + '}'
 
 # This object can be changed by other code updating this module's "brepr"
@@ -112,24 +128,32 @@ class BetterRepr(Repr):
 # (e.g. libbase32's base32id.AbbrevRepr).
 brepr = BetterRepr()
 
+
 def hr(x):
     return brepr.repr(x)
+
 
 def _assert(___cond=False, *___args, **___kwargs):
     if ___cond:
         return True
-    msgbuf=[]
+    msgbuf = []
     if ___args:
         msgbuf.append("%s %s" % tuple(map(hr, (___args[0], type(___args[0]),))))
         msgbuf.extend([", %s %s" % tuple(map(hr, (arg, type(arg),))) for arg in ___args[1:]])
         if ___kwargs:
-            msgbuf.append(", %s: %s %s" % ((___kwargs.items()[0][0],) + tuple(map(hr, (___kwargs.items()[0][1], type(___kwargs.items()[0][1]),)))))
+            msgbuf.append(", %s: %s %s" % ((___kwargs.items()[0][0],) +
+                          tuple(map(hr, (___kwargs.items()[0][1],
+                                         type(___kwargs.items()[0][1]),)))))
     else:
         if ___kwargs:
-            msgbuf.append("%s: %s %s" % ((___kwargs.items()[0][0],) + tuple(map(hr, (___kwargs.items()[0][1], type(___kwargs.items()[0][1]),)))))
-    msgbuf.extend([", %s: %s %s" % tuple(map(hr, (k, v, type(v),))) for k, v in ___kwargs.items()[1:]])
+            msgbuf.append("%s: %s %s" % ((___kwargs.items()[0][0],) +
+                          tuple(map(hr, (___kwargs.items()[0][1],
+                                         type(___kwargs.items()[0][1]),)))))
+    msgbuf.extend([", %s: %s %s" % tuple(map(hr, (k, v, type(v),)))
+                   for k, v in ___kwargs.items()[1:]])
 
-    raise AssertionError, "".join(msgbuf)
+    raise AssertionError("".join(msgbuf))
+
 
 def _with_log(op, res):
     """
@@ -141,8 +165,9 @@ def _with_log(op, res):
     """
     try:
         op(res)
-    except defer.AlreadyCalledError, e:
+    except defer.AlreadyCalledError:
         print "err %r" % (repr(op),)
+
 
 class HookMixin:
     """
@@ -200,4 +225,3 @@ class HookMixin:
 
     def _log(self, msg):
         print msg
-

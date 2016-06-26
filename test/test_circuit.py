@@ -1,6 +1,8 @@
 from random import randint
+
 from bwscanner.circuit import ExitScan, TwoHop, FullyConnected
 from test.template import TorTestCase
+
 
 class TestCircuitGenerators(TorTestCase):
     def test_exit_scan(self):
@@ -50,6 +52,7 @@ class TestCircuitGenerators(TorTestCase):
         for neighbors in circuits.itervalues():
             assert len(neighbors) == len(self.routers)
         assert len(circuits.keys()) == len(self.routers)
+
 
 def expand_circuit_generator(circuit_generator, circuits):
     """

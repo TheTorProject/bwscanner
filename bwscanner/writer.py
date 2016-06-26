@@ -1,8 +1,9 @@
-import sys
 import datetime
-from twisted.internet import threads, defer
 import os.path
 import json
+
+from twisted.internet import threads, defer
+
 
 class ResultSink(object):
     """
@@ -28,7 +29,8 @@ class ResultSink(object):
         if len(self.buffer) >= self.chunk_size:
             chunk = self.buffer[:self.chunk_size]
             self.buffer = self.buffer[self.chunk_size:]
-            log_path = os.path.join(self.out_dir, "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
+            log_path = os.path.join(self.out_dir,
+                                    "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
 
             def write():
                 wf = open(log_path, "w")
@@ -54,7 +56,8 @@ class ResultSink(object):
         def flush():
             if len(self.buffer) == 0:
                 return defer.succeed
-            log_path = os.path.join(self.out_dir, "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
+            log_path = os.path.join(self.out_dir,
+                                    "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
             wf = open(log_path, "w")
             try:
                 json.dump(self.buffer, wf, sort_keys=True)

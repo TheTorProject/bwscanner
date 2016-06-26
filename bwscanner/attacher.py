@@ -5,6 +5,7 @@ from txtorcon import TorState, launch_tor
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
+
 @implementer(IStreamAttacher)
 class SOCKSClientStreamAttacher(CircuitListenerMixin, StreamListenerMixin):
     """
@@ -91,6 +92,7 @@ class SOCKSClientStreamAttacher(CircuitListenerMixin, StreamListenerMixin):
         except KeyError:
             pass
 
+
 class StreamClosedListener(StreamListenerMixin):
     """
     Closes the contained circuit if the listened stream closes.
@@ -101,8 +103,10 @@ class StreamClosedListener(StreamListenerMixin):
     """
     def __init__(self, circ):
         self.circ = circ
+
     def stream_closed(self, *args, **kw):
         self.circ.close(ifUnused=True)
+
 
 def start_tor(config):
     """
@@ -125,19 +129,22 @@ def start_tor(config):
         return d2
     return get_random_tor_ports().addCallback(launch_and_get_state)
 
+
 def setconf_fetch_all_descs(tor):
     # ensure that we have server descriptors available
     d = tor.protocol.set_conf('UseMicroDescriptors', '0',
-                              'FetchUselessDescriptors','1',
+                              'FetchUselessDescriptors', '1',
                               'FetchDirInfoEarly', '1')
     return d.addCallback(lambda result: tor)
 
+
 def setconf_singleport_exit(tor):
     port = available_tcp_port(reactor)
+
     def add_single_port_exit(port):
         tor.protocol.set_conf('PublishServerDescriptor', '0',
                               'PortForwarding', '1',
-                              'AssumeReachable' ,'1',
+                              'AssumeReachable', '1',
                               'ClientRejectInternalAddresses', '0',
                               'OrPort', 'auto',
                               'ExitPolicyRejectPrivate', '0',

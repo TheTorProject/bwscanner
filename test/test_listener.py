@@ -13,8 +13,10 @@ from test.template import TorTestCase
 import random
 import time
 
+
 class NotEnoughMeasurements(SkipTest):
     pass
+
 
 class FakeCircuit(Circuit):
     def __init__(self, id=None, state='BOGUS'):
@@ -23,6 +25,7 @@ class FakeCircuit(Circuit):
         self.path = []
         self.id = id or random.randint(2222, 7777)
         self.state = state
+
 
 class TestCircuitEventListener(TorTestCase):
     @defer.inlineCallbacks
@@ -38,7 +41,7 @@ class TestCircuitEventListener(TorTestCase):
         self.assertIsInstance(circ, Circuit)
         self.assertEqual(circ.path, path)
         circuit_lifecycle = self.circuit_event_listener.circuits[circ]
-        #XXX argh, we haven't gotten all the events from Tor yet...
+        # XXX argh, we haven't gotten all the events from Tor yet...
         # hax to block until we've made Tor do something...
         yield circ.close(ifUnused=False)
         yield self.tor.protocol.get_info('version')
@@ -48,16 +51,18 @@ class TestCircuitEventListener(TorTestCase):
         assert len(circuit_lifecycle) == len(expected_states)
         assert [k['event'] for k in circuit_lifecycle] == expected_states
 
+
 class TestStreamBandwidthListener(TorTestCase):
     skip = "broken tests"
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestStreamBandwidthListener, self).setUp()
-        self.fetch_size = 8*2**20 # 8MB
+        self.fetch_size = 8*2**20  # 8MB
         self.stream_bandwidth_listener = yield StreamBandwidthListener(self.tor)
 
         class DummyResource(Resource):
             isLeaf = True
+
             def render_GET(self, request):
                 return 'a'*8*2**20
 
@@ -73,9 +78,9 @@ class TestStreamBandwidthListener(TorTestCase):
         r = yield self.do_fetch()
         bw_events = self.stream_bandwidth_listener.circ_bw_events.get(r['circ'])
         assert bw_events
-        #XXX: why are the counters reversed!? -> See StreamBandwidthListener
-        #     docstring.
-        #assert self.fetch_size/2 <= sum([x[1] for x in bw_events]) <= self.fetch_size
+        # XXX: why are the counters reversed!? -> See StreamBandwidthListener
+        #      docstring.
+        # assert self.fetch_size/2 <= sum([x[1] for x in bw_events]) <= self.fetch_size
         assert sum([x[1] for x in bw_events]) <= self.fetch_size
         # either this is backward, or we wrote more bytes than read?!
         assert sum([x[2] for x in bw_events]) >= sum([x[1] for x in bw_events])
@@ -97,7 +102,8 @@ class TestStreamBandwidthListener(TorTestCase):
 
         # XXX: If the measurement happens in under 1 second, we will have one
         #      STREAM_BW, and will not be able to calculate BW samples.
-        if len(bw_events) == 1: raise self.not_enough_measurements
+        if len(bw_events) == 1:
+            raise self.not_enough_measurements
         bw_samples = [x for x in self.stream_bandwidth_listener.bw_samples(r['circ'])]
         assert bw_samples
         assert self.fetch_size/2 <= sum([x[0] for x in bw_samples]) <= self.fetch_size
@@ -107,17 +113,19 @@ class TestStreamBandwidthListener(TorTestCase):
     def test_circ_avg_bw(self):
         r = yield self.do_fetch()
         bw_events = self.stream_bandwidth_listener.stream_bw_events.get(r['circ'])
-        #XXX: these complete too quickly to sample sufficient bytes...
+        # XXX: these complete too quickly to sample sufficient bytes...
         assert bw_events
         assert self.fetch_size/4 <= sum([x[1] for x in bw_events]) <= self.fetch_size
 
-        if len(bw_events) == 1: raise self.not_enough_measurements
+        if len(bw_events) == 1:
+            raise self.not_enough_measurements
         circ_avg_bw = self.stream_bandwidth_listener.circ_avg_bw(r['circ'])
-        assert circ_avg_bw != None
+        assert circ_avg_bw is not None
         assert circ_avg_bw['path'] == r['circ'].path
         assert self.fetch_size/4 <= circ_avg_bw['bytes_r'] <= self.fetch_size
         assert 0 < circ_avg_bw['duration'] <= r['duration']
-        assert circ_avg_bw['bytes_r']/4 < circ_avg_bw['samples'] * circ_avg_bw['r_bw'] < circ_avg_bw['bytes_r']*2
+        assert (circ_avg_bw['bytes_r']/4 < (circ_avg_bw['samples'] * circ_avg_bw['r_bw']) <
+                circ_avg_bw['bytes_r']*2)
 
     @defer.inlineCallbacks
     def do_fetch(self):

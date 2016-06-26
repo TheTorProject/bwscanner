@@ -1,3 +1,5 @@
+import time
+
 from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
 
@@ -10,10 +12,10 @@ from bwscanner.circuit import TwoHop
 from bwscanner.fetcher import OnionRoutedAgent
 from bwscanner.writer import ResultSink
 
-import time
 
 class DownloadIncomplete(Exception):
     pass
+
 
 class BwScan(object):
     def __init__(self, state, clock, log_dir, **kwargs):
@@ -36,14 +38,13 @@ class BwScan(object):
         self.circuit_lifetime = kwargs.get('circuit_lifetime', 60)
         self.circuit_launch_delay = kwargs.get('circuit_launch_delay', .2)
 
-
         self.tasks = []
         self.circuits = None
         self.baseurl = 'https://bwauth.torproject.org/bwauth.torproject.org'
-        self.bw_files = {64*1024:"64M", 32*1024:"32M", 16*1024:"16M",
-                         8*1024:"8M", 4*1024:"4M", 2*1024:"2M", 1024:"1M",
-                         512:"512k", 256:"256k", 128:"128k", 64:"64k",
-                         32:"32k", 16:"16k", 0:"16k"}
+        self.bw_files = {64*1024: "64M", 32*1024: "32M", 16*1024: "16M",
+                         8*1024: "8M", 4*1024: "4M", 2*1024: "2M", 1024: "1M",
+                         512: "512k", 256: "256k", 128: "128k", 64: "64k",
+                         32: "32k", 16: "16k", 0: "16k"}
 
         self.result_sink = ResultSink(log_dir, chunk_size=10)
 
@@ -67,8 +68,8 @@ class BwScan(object):
         all_done = defer.Deferred()
         if self.scan_continuous:
             all_done.addCallback(lambda ign: self.run_scan())
-        self.circuits = TwoHop(self.state,
-            partitions=self.partitions, this_partition=self.this_partition)
+        self.circuits = TwoHop(self.state, partitions=self.partitions,
+                               this_partition=self.this_partition)
 
         def scan_over_next_circuit():
             try:
@@ -92,7 +93,7 @@ class BwScan(object):
     def fetch(self, path):
         url = self.choose_url(path)
         assert None not in path
-        log.msg('Downloading {} over {}, {}'.format(url,path[0].id_hex, path[-1].id_hex))
+        log.msg('Downloading {} over {}, {}'.format(url, path[0].id_hex, path[-1].id_hex))
         file_size = self.choose_file_size(path)
         time_start = self.now()
 
@@ -161,7 +162,5 @@ class BwScan(object):
         raw_descriptor = yield self.state.protocol.get_info_raw('desc/id/{}'.format(router.id_hex))
         server_descriptor = ServerDescriptor(raw_descriptor)
         defer.returnValue((server_descriptor.average_bandwidth,
-               server_descriptor.burst_bandwidth,
-               server_descriptor.observed_bandwidth))
-
-
+                           server_descriptor.burst_bandwidth,
+                           server_descriptor.observed_bandwidth))
