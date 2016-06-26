@@ -2,6 +2,7 @@ language: python
 sudo: required
 dist: trusty
 env:
+  - TOXENV=style
   - TOXENV=py27 TEST=functional
 before_install:
   # Install tor and chutney if doing functional tests
