@@ -4,7 +4,8 @@ BWScanner
 .. image:: https://travis-ci.org/TheTorProject/bwscanner.svg?branch=develop
     :target: https://travis-ci.org/TheTorProject/bwscanner
 
-.. image:: https://coveralls.io/repos/github/TheTorProject/bwscanner/badge.svg?branch=develop :target: https://coveralls.io/github/TheTorProject/bwscanner?branch=develop
+.. image:: https://coveralls.io/repos/github/TheTorProject/bwscanner/badge.svg?branch=develop&reload=1 
+    :target: https://coveralls.io/github/TheTorProject/bwscanner?branch=develop
 
 BWScanner is a tool for measuring the bandwidth of Tor relays. Its aim is to replace the existing Torflow system.
 
