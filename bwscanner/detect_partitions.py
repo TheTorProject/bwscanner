@@ -1,11 +1,9 @@
-import os.path
-import json  # XXX replace with bson
 import time
 
-from twisted.internet import defer, threads
+from twisted.internet import defer
 
 from bwscanner.circuit import FullyConnected
-
+from bwscanner.writer import ResultSink
 
 
 class ProbeAll2HopCircuits(object):

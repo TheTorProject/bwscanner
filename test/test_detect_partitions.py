@@ -6,9 +6,8 @@ from twisted.test import proto_helpers
 from txtorcon import TorControlProtocol
 from txtorcon.router import hashFromHexId
 
-from bwscanner.condor import ProbeAll2HopCircuits
+from bwscanner.detect_partitions import ProbeAll2HopCircuits
 from bwscanner.circuit import FullyConnected, to_pair
-
 
 
 class FakeTorState(object):
