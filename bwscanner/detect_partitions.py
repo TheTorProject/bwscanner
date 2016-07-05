@@ -1,3 +1,10 @@
+"""
+This scanner is used to make a connection to every possible pair of
+Tor relays to test if they can context to each other.
+
+Relays which cannot connect to each other are bad for Tor network health
+and it may indicate that an attack is being performed.
+"""
 import time
 
 from twisted.internet import defer
