@@ -1,95 +1,16 @@
-import os.path
-import json  # XXX replace with bson
+"""
+This scanner is used to make a connection to every possible pair of
+Tor relays to test if they can context to each other.
+
+Relays which cannot connect to each other are bad for Tor network health
+and it may indicate that an attack is being performed.
+"""
 import time
 
-from twisted.internet import defer, threads
+from twisted.internet import defer
 
 from bwscanner.circuit import FullyConnected
-
-
-class ResultSink(object):
-    """
-    Send results to this sink, they'll eventually be written
-    via another thread so as to not block the reactor.
-    """
-
-    def __init__(self, out_dir, chunk_size=1000):
-        """
-        out_dir: the directory to json log files to
-        chunk_size: the max amount of data to write per file
-        """
-        self.out_dir = out_dir
-        self.chunk_size = chunk_size
-
-        self._buffer = []
-        self.writing = False
-        self.current_log_num = 0
-        self.current_d = None
-        self.done_writing = defer.Deferred()
-
-    def write_hook(self):
-        """
-        Create a Deferred which is called when writing is finished
-        """
-        self.done_writing = defer.Deferred()
-        return self.done_writing
-
-    def send(self, res):
-        """
-        This method writes data from a buffer into a log file,
-        using an ephemeral thread to perform the write.
-        The write takes place if the thread isn't already running
-        AND the buffer has at least chuck_size items.
-        """
-        self._buffer.append(res)
-        if len(self._buffer) >= self.chunk_size and not self.writing:
-            self.writing = True
-
-            chunk = []
-            while len(self._buffer) >= self.chunk_size:
-                next_chunk = self._buffer[:self.chunk_size]
-                chunk += next_chunk
-                self._buffer = self._buffer[self.chunk_size:]
-
-            log_path = os.path.join(self.out_dir, "sink%d.json" % (self.current_log_num,))
-            self.current_log_num += 1
-
-            def write():
-                wf = open(log_path, "w")
-                try:
-                    json.dump(chunk, wf, sort_keys=True)
-                finally:
-                    wf.close()
-            self.current_d = threads.deferToThread(write)
-
-            def doneWriting(ignore):
-                self.writing = False
-                self.done_writing.callback(True)
-
-            def show_fail(f):
-                print "show failure: %r" % (f,)
-
-            self.current_d.addCallback(doneWriting)
-            self.current_d.addErrback(show_fail)
-
-    def end_flush(self):
-        """
-        Write buffered contents to disk.
-        There's no need to perform this write
-        in a seperate thread.
-        """
-        def flush():
-            log_path = os.path.join(self.out_dir, "sink%d.json" % (self.current_log_num,))
-            wf = open(log_path, "w")
-            try:
-                json.dump(self._buffer, wf, sort_keys=True)
-            finally:
-                wf.close()
-        if self.writing:
-            return self.current_d.addCallback(lambda ign: flush())
-        else:
-            flush()
-            return defer.succeed(None)
+from bwscanner.writer import ResultSink
 
 
 class ProbeAll2HopCircuits(object):

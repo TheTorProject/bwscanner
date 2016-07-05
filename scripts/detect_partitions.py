@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""
+Two-Hop Relay Connectivity Tester
+
+A scanner to probe all possible two hop circuits to detect network
+partitioning problems where some relays are not able to connect to other
+relays.
+"""
 
 import click
 import sys
