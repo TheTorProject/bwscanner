@@ -4,6 +4,8 @@ Classes used for choosing relay circuit paths
 import operator
 import random
 
+from twisted.python import log
+
 
 class CircuitGenerator(object):
     def __init__(self, state):
@@ -62,7 +64,7 @@ class TwoHop(CircuitGenerator):
     Select two hop circuits with the relay to be measured and a random exit
     relay of similar bandwidth.
     """
-    def __init__(self, state, partitions=1, this_partition=0, slice_width=50):
+    def __init__(self, state, partitions=1, this_partition=1, slice_width=50):
         """
         TwoHop can be called multiple times with different partition
         values to produce slices containing a subset of the relays. These
@@ -78,8 +80,11 @@ class TwoHop(CircuitGenerator):
             choose an exit relay of similar bandwidth for the circuit
             """
             num_relays = len(self.relays)
-            for i in random.sample(range(this_partition, num_relays, partitions),
-                                   num_relays):
+            relay_subset = range(this_partition-1, num_relays, partitions)
+            log.msg("Performing a measurement scan with %d relays." % len(relay_subset))
+
+            # Choose relays in a random order fromm the relays in this partition set.
+            for i in random.sample(relay_subset, len(relay_subset)):
                 relay = self.relays[i]
                 yield relay, self.exit_by_bw(relay)
 
