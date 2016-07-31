@@ -5,11 +5,10 @@ from stem.descriptor.networkstatus import RouterStatusEntryV3
 
 from twisted.internet import defer
 from twisted.python import log
-from twisted.web.client import readBody
 
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.fetcher import OnionRoutedAgent, cancelableReadBody
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -133,21 +132,19 @@ class BwScan(object):
 
         def timeoutDeferred(deferred, timeout):
             def cancelDeferred(deferred):
-                log.msg("Cancelling deferred", deferred)
                 deferred.cancel()
 
             delayedCall = self.clock.callLater(timeout, cancelDeferred, deferred)
 
             def gotResult(result):
                 if delayedCall.active():
-                    log.msg("Cancel timeout")
                     delayedCall.cancel()
                 return result
             deferred.addBoth(gotResult)
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        request.addCallback(readBody)  # returns a readBody Deferred
+        request.addCallback(cancelableReadBody)  # returns a readBody Deferred
         timeoutDeferred(request, self.request_timeout)
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
