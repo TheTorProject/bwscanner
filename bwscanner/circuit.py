@@ -79,7 +79,7 @@ class TwoHop(CircuitGenerator):
             """
             num_relays = len(self.relays)
             for i in random.sample(range(this_partition, num_relays, partitions),
-                                   num_relays):
+                                   num_relays/partitions):
                 relay = self.relays[i]
                 yield relay, self.exit_by_bw(relay)
 
