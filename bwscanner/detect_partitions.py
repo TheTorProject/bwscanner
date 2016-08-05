@@ -94,7 +94,7 @@ class ProbeAll2HopCircuits(object):
             return None
 
         time_start = self.now()
-        d = build_timeout_circuit(self.state, self.reactor, route, self.circuit_life_duration)
+        d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
         d.addCallback(circuit_build_report)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
