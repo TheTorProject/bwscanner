@@ -11,6 +11,7 @@ from twisted.internet import defer
 
 from bwscanner.circuit import FullyConnected
 from bwscanner.writer import ResultSink
+from txtorcon.circuit import build_timeout_circuit, CircuitBuildTimedOutError
 
 
 class ProbeAll2HopCircuits(object):
@@ -74,8 +75,7 @@ class ProbeAll2HopCircuits(object):
             return None
 
         def circuit_build_timeout(f):
-            # XXX: CircuitBuildTimedOutError doesn't exist?
-            # f.trap(CircuitBuildTimedOutError)
+            f.trap(CircuitBuildTimedOutError)
             time_end = self.now()
             self.result_sink.send({"time_start": time_start,
                                    "time_end": time_end,
@@ -94,9 +94,7 @@ class ProbeAll2HopCircuits(object):
             return None
 
         time_start = self.now()
-        # XXX build_timeout_circuit doesn't yet exist in upstream txtorcon
-        d = self.state.build_circuit(route)
-        self.clock.callLater(self.circuit_life_duration, d.cancel)
+        d = build_timeout_circuit(self.state, self.reactor, route, self.circuit_life_duration)
         d.addCallback(circuit_build_report)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
