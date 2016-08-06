@@ -94,7 +94,7 @@ class OnionRoutedAgent(Agent):
         return endpoint
 
 
-class cancelableReadBodyProtocol(_ReadBodyProtocol):
+class cancellableReadBodyProtocol(_ReadBodyProtocol):
     def connectionLost(self, reason):
         """
         Deliver the accumulated response bytes to the waiting L{Deferred}, if
@@ -114,7 +114,7 @@ class cancelableReadBodyProtocol(_ReadBodyProtocol):
             self.deferred.errback(reason)
 
 
-def cancelableReadBody(response):
+def cancellableReadBody(response):
     """
     Get the body of an L{IResponse} and return it as a byte string.
 
@@ -139,7 +139,7 @@ def cancelableReadBody(response):
             abort()
 
     d = defer.Deferred(cancel)
-    protocol = cancelableReadBodyProtocol(response.code, response.phrase, d)
+    protocol = cancellableReadBodyProtocol(response.code, response.phrase, d)
 
     def getAbort():
         return getattr(protocol.transport, 'abortConnection', None)

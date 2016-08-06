@@ -8,7 +8,7 @@ from twisted.python import log
 
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent, cancelableReadBody
+from bwscanner.fetcher import OnionRoutedAgent, cancellableReadBody
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -144,7 +144,7 @@ class BwScan(object):
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        request.addCallback(cancelableReadBody)  # returns a readBody Deferred
+        request.addCallback(cancellableReadBody)  # returns a readBody Deferred
         timeoutDeferred(request, self.request_timeout)
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
