@@ -5,12 +5,13 @@ from stem.descriptor.networkstatus import RouterStatusEntryV3
 
 from twisted.internet import defer
 from twisted.python import log
-from twisted.web.client import readBody
 
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.fetcher import OnionRoutedAgent, cancelableReadBody
 from bwscanner.writer import ResultSink
+
+# defer.setDebugging(True)
 
 
 class DownloadIncomplete(Exception):
@@ -35,7 +36,7 @@ class BwScan(object):
         self.partitions = kwargs.get('partitions', 1)
         self.this_partition = kwargs.get('this_partition', 0)
         self.scan_continuous = kwargs.get('scan_continuous', False)
-        self.circuit_lifetime = kwargs.get('circuit_lifetime', 60)
+        self.request_timeout = kwargs.get('request_timeout', 60)
         self.circuit_launch_delay = kwargs.get('circuit_launch_delay', .2)
 
         self.tasks = []
@@ -116,6 +117,7 @@ class BwScan(object):
                 report['path_desc_bws'].append((yield self.get_r_desc_bw(relay)))
                 report['path_ns_bws'].append((yield self.get_r_ns_bw(relay)))
             report['path_bws'] = [r.bandwidth for r in path]
+            log.msg("Download successful for router %s." % path[0].id_hex)
             defer.returnValue(report)
 
         def circ_failure(failure):
@@ -125,17 +127,28 @@ class BwScan(object):
             report['time_start'] = time_start
             report['path'] = [r.id_hex for r in path]
             report['failure'] = failure.__repr__()
+            log.msg("Download failed for router %s: %s." % (path[0].id_hex, report['failure']))
             return report
+
+        def timeoutDeferred(deferred, timeout):
+            def cancelDeferred(deferred):
+                deferred.cancel()
+
+            delayedCall = self.clock.callLater(timeout, cancelDeferred, deferred)
+
+            def gotResult(result):
+                if delayedCall.active():
+                    delayedCall.cancel()
+                return result
+            deferred.addBoth(gotResult)
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        timeout_circuit = self.clock.callLater(self.circuit_lifetime, request.cancel)
-        request.addCallback(readBody)
-        request.addCallbacks(get_circuit_bw, errback=circ_failure)
+        request.addCallback(cancelableReadBody)  # returns a readBody Deferred
+        timeoutDeferred(request, self.request_timeout)
+        request.addCallbacks(get_circuit_bw)
+        request.addErrback(circ_failure)
         request.addCallback(self.result_sink.send)
-
-        # Stop circuit timeout callLater when we have been successful
-        request.addCallback(lambda _: timeout_circuit.cancel())
         self.tasks.append(request)
 
     @defer.inlineCallbacks
