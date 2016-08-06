@@ -1,6 +1,6 @@
 from twisted.internet import interfaces, reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import SchemeNotSupported, Agent
+from twisted.web.client import SchemeNotSupported, Agent, BrowserLikePolicyForHTTPS
 from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
@@ -62,6 +62,7 @@ class OnionRoutedTCPClientEndpoint(object):
 
 class OnionRoutedAgent(Agent):
     _tlsWrapper = TLSWrapClientEndpoint
+    _policyForHTTPS = BrowserLikePolicyForHTTPS
 
     def __init__(self, *args, **kw):
         self.path = kw.pop('path')
@@ -82,9 +83,8 @@ class OnionRoutedAgent(Agent):
             if hasattr(self, '_wrapContextFactory'):
                 tls_policy = self._wrapContextFactory(host, port)
             elif hasattr(self, '_policyForHTTPS'):
-                tls_policy = self._policyForHTTPS.creatorForNetloc(host, port)
+                tls_policy = self._policyForHTTPS().creatorForNetloc(host, port)
             else:
-                raise NotImplementedError(
-                    "can't figure out how to make a context factory")
+                raise NotImplementedError("Cannot create a TLS validation policy.")
             endpoint = self._tlsWrapper(tls_policy, endpoint)
         return endpoint

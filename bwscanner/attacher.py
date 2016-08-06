@@ -1,9 +1,20 @@
 import sys
+import itertools
+
+from twisted.python import log
 from twisted.internet import defer, reactor
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
 from txtorcon import TorState, launch_tor
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
+
+
+FETCH_ALL_DESCRIPTOR_OPTIONS = {
+    'UseMicroDescriptors': 0,
+    'FetchUselessDescriptors': 1,
+    'FetchDirInfoEarly': 1,
+    'FetchDirInfoExtraEarly': 1,
+}
 
 
 @implementer(IStreamAttacher)
@@ -130,11 +141,12 @@ def start_tor(config):
     return get_random_tor_ports().addCallback(launch_and_get_state)
 
 
-def setconf_fetch_all_descs(tor):
-    # ensure that we have server descriptors available
-    d = tor.protocol.set_conf('UseMicroDescriptors', '0',
-                              'FetchUselessDescriptors', '1',
-                              'FetchDirInfoEarly', '1')
+def update_tor_config(tor, config):
+    """
+    Update the Tor config from a dict of config key: value pairs.
+    """
+    config_pairs = [(key, value) for key, value in config.items()]
+    d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
     return d.addCallback(lambda result: tor)
 
 
