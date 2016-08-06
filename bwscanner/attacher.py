@@ -1,7 +1,6 @@
 import sys
 import itertools
 
-from twisted.python import log
 from twisted.internet import defer, reactor
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
 from txtorcon import TorState, launch_tor
