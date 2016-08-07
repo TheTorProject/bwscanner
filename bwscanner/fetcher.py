@@ -1,10 +1,10 @@
 import warnings
+import hashlib
 
-from twisted.internet import interfaces, reactor, defer
+from twisted.internet import interfaces, reactor, defer, protocol
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.web.client import (SchemeNotSupported, Agent, BrowserLikePolicyForHTTPS,
-                                _ReadBodyProtocol, ResponseDone, PotentialDataLoss,
-                                PartialDownloadError)
+                                ResponseDone, PotentialDataLoss, PartialDownloadError)
 from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
@@ -94,7 +94,26 @@ class OnionRoutedAgent(Agent):
         return endpoint
 
 
-class cancellableReadBodyProtocol(_ReadBodyProtocol):
+class hashingReadBodyProtocol(protocol.Protocol):
+    """
+    Protocol that collects data sent to it and hashes it.
+
+    This is a helper for L{IResponse.deliverBody}, which collects the body and
+    fires a deferred with it.
+    """
+
+    def __init__(self, status, message, deferred):
+        self.deferred = deferred
+        self.status = status
+        self.message = message
+        self.hash_state = hashlib.sha1()
+
+    def dataReceived(self, data):
+        """
+        Accumulate and hash some more bytes from the response.
+        """
+        self.hash_state.update(data)
+
     def connectionLost(self, reason):
         """
         Deliver the accumulated response bytes to the waiting L{Deferred}, if
@@ -105,27 +124,25 @@ class cancellableReadBodyProtocol(_ReadBodyProtocol):
         was already called to avoid raising an AlreadyCalled exception.
         """
         if reason.check(ResponseDone):
-            self.deferred.callback(b''.join(self.dataBuffer))
+            self.deferred.callback(self.hash_state.hexdigest())
         elif reason.check(PotentialDataLoss):
             self.deferred.errback(
                 PartialDownloadError(self.status, self.message,
-                                     b''.join(self.dataBuffer)))
+                                     self.hash_state.hexdigest()))
         elif not self.deferred.called:
             self.deferred.errback(reason)
 
 
-def cancellableReadBody(response):
+def hashingReadBody(response):
     """
-    Get the body of an L{IResponse} and return it as a byte string.
-
-    This is a helper function for clients that don't want to incrementally
-    receive the body of an HTTP response.
+    Get the body of an L{IResponse} and return the SHA1 hash of the body.
 
     @param response: The HTTP response for which the body will be read.
     @type response: L{IResponse} provider
 
-    @return: A L{Deferred} which will fire with the body of the response.
-        Cancelling it will close the connection to the server immediately.
+    @return: A L{Deferred} which will fire with the hex encoded SHA1 hash
+        of the response. Cancelling it will close the connection to the
+        server immediately.
     """
     def cancel(deferred):
         """
@@ -139,7 +156,7 @@ def cancellableReadBody(response):
             abort()
 
     d = defer.Deferred(cancel)
-    protocol = cancellableReadBodyProtocol(response.code, response.phrase, d)
+    protocol = hashingReadBodyProtocol(response.code, response.phrase, d)
 
     def getAbort():
         return getattr(protocol.transport, 'abortConnection', None)

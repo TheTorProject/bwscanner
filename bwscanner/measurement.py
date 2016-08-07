@@ -8,7 +8,7 @@ from twisted.python import log
 
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent, cancellableReadBody
+from bwscanner.fetcher import OnionRoutedAgent, hashingReadBody
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -42,10 +42,14 @@ class BwScan(object):
         self.tasks = []
         self.circuits = None
         self.baseurl = 'https://bwauth.torproject.org/bwauth.torproject.org'
-        self.bw_files = {64*1024: "64M", 32*1024: "32M", 16*1024: "16M",
-                         8*1024: "8M", 4*1024: "4M", 2*1024: "2M", 1024: "1M",
-                         512: "512k", 256: "256k", 128: "128k", 64: "64k",
-                         32: "32k", 16: "16k", 0: "16k"}
+        self.bw_files = {
+            64*1024: ("64M", "913b3c5df256d62235f955fa936e7a4e2d5e0cb6"),
+            32*1024: ("32M", "a536076ef51c2cfff607fec2d362671e031d6b48"),
+            16*1024: ("16M", "e91690ed2abf05e347b61aafaa23abf2a2b3292f"),
+            8*1024: ("8M", "c690229b300945ec4ba872b80e8c443e2e1750f0"),
+            4*1024: ("4M", "94f7bc6679a4419b080debd70166c2e43e80533d"),
+            2*1024: ("2M", "9793cc92932598898d22497acdd5d732037b1a13"),
+        }
 
         self.result_sink = ResultSink(log_dir, chunk_size=10)
 
@@ -56,6 +60,12 @@ class BwScan(object):
         return 1000 * time.time()
 
     def choose_file_size(self, path):
+        """
+        Choose bandwidth file based on average bandwidth of relays on
+        circuit.
+
+        XXX: Should we just use the bandwidth of the measured relay instead?
+        """
         avg_bw = sum([r.bandwidth for r in path])/len(path)
         for size in sorted(self.bw_files.keys()):
             if avg_bw*5 < size:
@@ -63,7 +73,7 @@ class BwScan(object):
         return max(self.bw_files.keys())
 
     def choose_url(self, path):
-        return self.baseurl + '/' + self.bw_files[self.choose_file_size(path)]
+        return self.baseurl + '/' + self.bw_files[self.choose_file_size(path)][0]
 
     def run_scan(self):
         all_done = defer.Deferred()
@@ -96,12 +106,13 @@ class BwScan(object):
         assert None not in path
         log.msg('Downloading {} over {}, {}'.format(url, path[0].id_hex, path[-1].id_hex))
         file_size = self.choose_file_size(path)
+        file_hash = self.bw_files[file_size][1]
         time_start = self.now()
 
         @defer.inlineCallbacks
         def get_circuit_bw(result):
             time_end = self.now()
-            if len(result) < file_size:
+            if result != file_hash:
                 raise DownloadIncomplete
             report = dict()
             report['time_end'] = time_end
@@ -144,7 +155,7 @@ class BwScan(object):
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        request.addCallback(cancellableReadBody)  # returns a readBody Deferred
+        request.addCallback(hashingReadBody)  # returns a readBody Deferred
         timeoutDeferred(request, self.request_timeout)
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
