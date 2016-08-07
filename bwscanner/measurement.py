@@ -42,10 +42,14 @@ class BwScan(object):
         self.tasks = []
         self.circuits = None
         self.baseurl = 'https://bwauth.torproject.org/bwauth.torproject.org'
-        self.bw_files = {64*1024: "64M", 32*1024: "32M", 16*1024: "16M",
-                         8*1024: "8M", 4*1024: "4M", 2*1024: "2M", 1024: "1M",
-                         512: "512k", 256: "256k", 128: "128k", 64: "64k",
-                         32: "32k", 16: "16k", 0: "16k"}
+        self.bw_files = {
+            64*1024: "64M",
+            32*1024: "32M",
+            16*1024: "16M",
+            8*1024: "8M",
+            4*1024: "4M",
+            2*1024: "2M",
+        }
 
         self.result_sink = ResultSink(log_dir, chunk_size=10)
 
