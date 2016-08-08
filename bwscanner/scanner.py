@@ -57,6 +57,9 @@ def cli(ctx, verbose, data_dir):
               help='Scan a particular subset / partition of the relays.')
 @click.option('--timeout', default=120,
               help='Timeout for measurement HTTP requests (default: %ds).' % 120)
+@click.option('--request-limit', default=10,
+              help='Limit the number of simultaneous bandwidth measurements '
+              '(default: %d).' % 10)
 @click.option('--launch-tor/--no-launch-tor', default=True,
               help='Launch Tor or try to connect to an existing Tor instance.')
 @click.option('--circuit-build-timeout', default=20,
@@ -65,7 +68,7 @@ def cli(ctx, verbose, data_dir):
               help='Option passed when launching Tor.')
 @pass_scan
 def scan(scan, launch_tor, partitions, current_partition, timeout,
-         circuit_build_timeout, circuit_idle_timeout):
+         request_limit, circuit_build_timeout, circuit_idle_timeout):
     """
     Start a scan through each Tor relay to measure it's bandwidth.
     """
@@ -108,7 +111,8 @@ def scan(scan, launch_tor, partitions, current_partition, timeout,
         os.makedirs(measurement_dir)
 
     tor.addCallback(BwScan, reactor, measurement_dir, request_timeout=timeout,
-                    partitions=partitions, this_partition=current_partition)
+                    request_limit=request_limit, partitions=partitions,
+                    this_partition=current_partition)
     tor.addCallback(lambda scanner: scanner.run_scan())
     tor.addCallback(lambda _: reactor.stop())
     reactor.run()

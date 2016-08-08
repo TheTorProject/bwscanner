@@ -38,6 +38,8 @@ class BwScan(object):
         self.scan_continuous = kwargs.get('scan_continuous', False)
         self.request_timeout = kwargs.get('request_timeout', 60)
         self.circuit_launch_delay = kwargs.get('circuit_launch_delay', .2)
+        # Limit the number of simultaneous bandwidth measurements
+        self.request_limit = kwargs.get('request_limit', 10)
 
         self.tasks = []
         self.circuits = None
@@ -81,10 +83,12 @@ class BwScan(object):
             all_done.addCallback(lambda ign: self.run_scan())
         self.circuits = TwoHop(self.state, partitions=self.partitions,
                                this_partition=self.this_partition)
+        sem = defer.DeferredSemaphore(self.request_limit)
 
         def scan_over_next_circuit():
             try:
-                self.fetch(self.circuits.next())
+                task = sem.run(self.fetch, self.circuits.next())
+                self.tasks.append(task)
             except StopIteration:
                 # All circuit measurement tasks have been setup. Now wait for
                 # all tasks to complete before writing results, and firing
@@ -160,7 +164,7 @@ class BwScan(object):
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
         request.addCallback(self.result_sink.send)
-        self.tasks.append(request)
+        return request
 
     @defer.inlineCallbacks
     def get_r_ns_bw(self, router):
