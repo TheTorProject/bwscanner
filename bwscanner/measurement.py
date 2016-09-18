@@ -108,8 +108,8 @@ class BwScan(object):
     def fetch(self, path):
         url = self.choose_url(path)
         assert None not in path
-        log.info("Downloading {url} over [{relay_fp}, {exit_fp}].", url=url,
-                 relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
+        log.info("Downloading file '{file_size}' over [{relay_fp}, {exit_fp}].",
+                 file_size=url.split('/')[-1], relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
         file_size = self.choose_file_size(path)
         file_hash = self.bw_files[file_size][1]
         time_start = self.now()
