@@ -33,8 +33,8 @@ pass_scan = click.make_pass_decorator(ScanInstance)
               'other data.')
 @click.option('-l', '--loglevel', help='The logging level the scanner will use (default: info)',
               default='info', type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
-@click.option('-f', '--logfile',  type=click.Path(), default='bwscanner.log',
-              help='The file the log will be written to')
+@click.option('-f', '--logfile', type=click.Path(), help='The file the log will be written to',
+              default=os.environ.get("BWSCANNER_LOGFILE", 'bwscanner.log'))
 @click.version_option(BWSCAN_VERSION)
 @click.pass_context
 def cli(ctx, data_dir, loglevel, logfile):
