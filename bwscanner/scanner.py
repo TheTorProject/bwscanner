@@ -9,6 +9,7 @@ from txtorcon import build_local_tor_connection, TorConfig
 from bwscanner.logger import setup_logging, log
 from bwscanner.attacher import start_tor, update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS
 from bwscanner.measurement import BwScan
+from bwscanner.aggregate import write_aggregate_data
 
 
 BWSCAN_VERSION = '0.0.1'
@@ -138,10 +139,48 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
     reactor.run()
 
 
+def get_recent_scans(measurement_dir):
+    return sorted([name for name in os.listdir(measurement_dir) if name.isdigit()])
+
+
+@cli.command(short_help="List available bandwidth measurement directories.")
+@pass_scan
+def list(scan):
+    """
+    List the names of all completed scan directories
+    """
+    scan_data_dirs = get_recent_scans(scan.measurement_dir)
+    if scan_data_dirs:
+        for scan_dir in scan_data_dirs:
+            click.echo(click.format_filename(scan_dir))
+    else:
+        log.warn("No completed scan data found in {measurement_dir}",
+                 measurement_dir=scan.measurement_dir)
+
+
 @cli.command(short_help="Combine bandwidth measurements.")
-def aggregate():
+@click.argument('scan_name', required=False)
+@pass_scan
+def aggregate(scan, scan_name):
     """
-    Command to aggregate BW measurements to create file for the BWAuths
+    Command to aggregate BW measurements and create the bandwidth file for the BWAuths
     """
-    log.info("Aggregating bandwidth measurements.")
-    log.warn("Not implemented yet!")
+    if not scan_name:
+        try:
+            # Use the most recent completed scan by default
+            scan_name = get_recent_scans(scan.measurement_dir)[0]
+        except IndexError:
+            scan_name = None
+
+    # Confirm that the specified scan directory exists
+    scan_dir_path = os.path.join(scan.measurement_dir, scan_name)
+    if not os.path.isdir(scan_dir_path):
+        log.warn("Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
+        sys.exit(-1)
+
+    log.info("Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
+
+    scan.tor.addCallback(lambda tor: write_aggregate_data(tor, scan_dir_path))
+    scan.tor.addErrback(lambda failure: log.failure("Unexpected error"))
+    scan.tor.addCallback(lambda _: reactor.stop())
+    reactor.run()
