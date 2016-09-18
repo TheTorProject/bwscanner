@@ -4,8 +4,8 @@ from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
 
 from twisted.internet import defer
-from twisted.python import log
 
+from bwscanner.logger import log
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
 from bwscanner.fetcher import OnionRoutedAgent, hashingReadBody
@@ -108,7 +108,8 @@ class BwScan(object):
     def fetch(self, path):
         url = self.choose_url(path)
         assert None not in path
-        log.msg('Downloading {} over {}, {}'.format(url, path[0].id_hex, path[-1].id_hex))
+        log.info("Downloading {url} over [{relay_fp}, {exit_fp}].", url=url,
+                 relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
         file_size = self.choose_file_size(path)
         file_hash = self.bw_files[file_size][1]
         time_start = self.now()
@@ -132,7 +133,7 @@ class BwScan(object):
                 report['path_desc_bws'].append((yield self.get_r_desc_bw(relay)))
                 report['path_ns_bws'].append((yield self.get_r_ns_bw(relay)))
             report['path_bws'] = [r.bandwidth for r in path]
-            log.msg("Download successful for router %s." % path[0].id_hex)
+            log.info("Download successful for router {fingerprint}.", fingerprint=path[0].id_hex)
             defer.returnValue(report)
 
         def circ_failure(failure):
@@ -142,7 +143,8 @@ class BwScan(object):
             report['time_start'] = time_start
             report['path'] = [r.id_hex for r in path]
             report['failure'] = failure.__repr__()
-            log.msg("Download failed for router %s: %s." % (path[0].id_hex, report['failure']))
+            log.warn("Download failed for router {fingerprint}: {failure}.",
+                     fingerprint=path[0].id_hex, failure=report['failure'])
             return report
 
         def timeoutDeferred(deferred, timeout):

@@ -4,7 +4,7 @@ Classes used for choosing relay circuit paths
 import operator
 import random
 
-from twisted.python import log
+from bwscanner.logger import log
 
 
 class CircuitGenerator(object):
@@ -81,7 +81,7 @@ class TwoHop(CircuitGenerator):
             """
             num_relays = len(self.relays)
             relay_subset = range(this_partition-1, num_relays, partitions)
-            log.msg("Performing a measurement scan with %d relays." % len(relay_subset))
+            log.info("Performing a measurement scan with {count} relays.", count=len(relay_subset))
 
             # Choose relays in a random order fromm the relays in this partition set.
             for i in random.sample(relay_subset, len(relay_subset)):

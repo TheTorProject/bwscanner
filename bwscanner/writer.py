@@ -2,8 +2,9 @@ import datetime
 import os.path
 import json
 
-from twisted.python import log
 from twisted.internet import threads, defer
+
+from bwscanner.logger import log
 
 
 class ResultSink(object):
@@ -64,7 +65,7 @@ class ResultSink(object):
                 json.dump(self.buffer, wf, sort_keys=True)
             finally:
                 wf.close()
-            log.msg("Finished writing measurement values to %s" % log_path)
+            log.info("Finished writing measurement values to {log_path}.", log_path=log_path)
 
         def maybe_do_work(result):
             if len(self.buffer) != 0:
