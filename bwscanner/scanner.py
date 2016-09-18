@@ -13,6 +13,7 @@ from bwscanner.measurement import BwScan
 
 BWSCAN_VERSION = '0.0.1'
 
+
 def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout):
     """
     Launch or connect to a Tor instance
@@ -128,8 +129,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
         os.rename(scan_data_dir, os.path.join(scan.measurement_dir, scan_time))
 
     scan.tor.addCallback(BwScan, reactor, scan_data_dir, request_timeout=timeout,
-                        request_limit=request_limit, partitions=partitions,
-                        this_partition=current_partition)
+                         request_limit=request_limit, partitions=partitions,
+                         this_partition=current_partition)
     scan.tor.addCallback(lambda scanner: scanner.run_scan())
     scan.tor.addCallback(lambda _: reactor.stop())
     scan.tor.addCallback(rename_finished_scan)
