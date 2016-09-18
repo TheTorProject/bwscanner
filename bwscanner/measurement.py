@@ -1,5 +1,4 @@
 import time
-import os
 
 from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
@@ -20,7 +19,7 @@ class DownloadIncomplete(Exception):
 
 
 class BwScan(object):
-    def __init__(self, state, clock, data_dir, **kwargs):
+    def __init__(self, state, clock, measurement_dir, **kwargs):
         """
         state: the txtorcon state object
         clock: this argument is normally the twisted global reactor object but
@@ -33,7 +32,7 @@ class BwScan(object):
         """
         self.state = state
         self.clock = clock
-        self.measurement_dir = os.path.join(data_dir, str(int(time.time())))
+        self.measurement_dir = measurement_dir
         self.partitions = kwargs.get('partitions', 1)
         self.this_partition = kwargs.get('this_partition', 0)
         self.scan_continuous = kwargs.get('scan_continuous', False)

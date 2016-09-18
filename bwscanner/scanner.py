@@ -1,4 +1,5 @@
 import os
+import time
 
 import click
 from twisted.internet import reactor
@@ -105,9 +106,12 @@ def scan(scan, launch_tor, partitions, current_partition, timeout,
     tor.addCallback(tor_status)
 
     # XXX: check that each run is producing the same input set!
-    measurement_dir = os.path.join(scan.data_dir, 'measurements')
-    if not os.path.exists(measurement_dir):
+    measurement_dir = os.path.join(scan.data_dir, 'measurements', str(int(time.time())))
+    try:
         os.makedirs(measurement_dir)
+    except OSError:
+        if not os.path.isdir(measurement_dir):
+            raise
 
     tor.addCallback(BwScan, reactor, measurement_dir, request_timeout=timeout,
                     request_limit=request_limit, partitions=partitions,
