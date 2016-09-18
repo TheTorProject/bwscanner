@@ -72,7 +72,7 @@ pass_scan = click.make_pass_decorator(ScanInstance)
               default='info', type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
 @click.option('-f', '--logfile', type=click.Path(), help='The file the log will be written to',
               default=os.environ.get("BWSCANNER_LOGFILE", 'bwscanner.log'))
-@click.option('--launch-tor/--no-launch-tor', default=True,
+@click.option('--launch-tor/--no-launch-tor', default=False,
               help='Launch Tor or try to connect to an existing Tor instance.')
 @click.option('--circuit-build-timeout', default=20,
               help='Option passed when launching Tor.')
