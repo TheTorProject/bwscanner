@@ -1,4 +1,5 @@
 import time
+import os
 
 from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
@@ -19,20 +20,20 @@ class DownloadIncomplete(Exception):
 
 
 class BwScan(object):
-    def __init__(self, state, clock, log_dir, **kwargs):
+    def __init__(self, state, clock, data_dir, **kwargs):
         """
         state: the txtorcon state object
         clock: this argument is normally the twisted global reactor object but
         unit tests might set this to a clock object which can time travel for
         speeding up tests.
-        log_dir: the directory to write log files
+        measurement_dir: the directory to write the json data files for this scan
         partitions: the number of partitions to use for processing the
         set of circuits
         this_partition: which partition of circuit we will process
         """
         self.state = state
         self.clock = clock
-        self.log_dir = log_dir
+        self.measurement_dir = os.path.join(data_dir, str(int(time.time())))
         self.partitions = kwargs.get('partitions', 1)
         self.this_partition = kwargs.get('this_partition', 0)
         self.scan_continuous = kwargs.get('scan_continuous', False)
@@ -53,7 +54,7 @@ class BwScan(object):
             2*1024: ("2M", "9793cc92932598898d22497acdd5d732037b1a13"),
         }
 
-        self.result_sink = ResultSink(log_dir, chunk_size=10)
+        self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
 
         # Add a stream attacher
         self.state.set_attacher(SOCKSClientStreamAttacher(self.state), clock)

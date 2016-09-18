@@ -25,6 +25,13 @@ class ResultSink(object):
         self.writing = False
         self.current_task = defer.succeed(None)
 
+        # Create directory to store the data for this test.
+        try:
+            os.makedirs(out_dir)
+        except OSError:
+            if not os.path.isdir(out_dir):
+                raise
+
     def send(self, res):
         """
         send returns a deferred which represents our current deferred work chain.
