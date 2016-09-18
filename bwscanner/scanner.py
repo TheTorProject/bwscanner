@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 import click
@@ -54,6 +55,7 @@ class ScanInstance(object):
     """
     def __init__(self, data_dir):
         self.data_dir = data_dir
+        self.measurement_dir = os.path.join(data_dir, 'measurements')
 
     def __repr__(self):
         return '<BWScan %r>' % self.data_dir
@@ -86,9 +88,10 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout, cir
     """
     # Create the data directory if it doesn't exist
     data_dir = os.path.abspath(data_dir)
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
     ctx.obj = ScanInstance(data_dir)
+
+    if not os.path.isdir(ctx.obj.measurement_dir):
+        os.makedirs(ctx.obj.measurement_dir)
 
     # Create a connection to a Tor instance
     ctx.obj.tor = connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout)
@@ -115,18 +118,22 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
     log.info("Using {data_dir} as the data directory.", data_dir=scan.data_dir)
 
     # XXX: check that each run is producing the same input set!
-    measurement_dir = os.path.join(scan.data_dir, 'measurements', str(int(time.time())))
-    try:
-        os.makedirs(measurement_dir)
-    except OSError:
-        if not os.path.isdir(measurement_dir):
-            raise
+    scan_time = str(int(time.time()))
+    scan_data_dir = os.path.join(scan.measurement_dir, '{}.running'.format(scan_time))
+    if not os.path.isdir(scan_data_dir):
+        os.makedirs(scan_data_dir)
 
-    scan.tor.addCallback(BwScan, reactor, measurement_dir, request_timeout=timeout,
+    def rename_finished_scan(deferred):
+        click.echo(deferred)
+        os.rename(scan_data_dir, os.path.join(scan.measurement_dir, scan_time))
+
+    scan.tor.addCallback(BwScan, reactor, scan_data_dir, request_timeout=timeout,
                         request_limit=request_limit, partitions=partitions,
                         this_partition=current_partition)
     scan.tor.addCallback(lambda scanner: scanner.run_scan())
     scan.tor.addCallback(lambda _: reactor.stop())
+    scan.tor.addCallback(rename_finished_scan)
+
     reactor.run()
 
 
