@@ -1,5 +1,4 @@
 import time
-import os
 
 from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
@@ -20,7 +19,7 @@ class DownloadIncomplete(Exception):
 
 
 class BwScan(object):
-    def __init__(self, state, clock, data_dir, **kwargs):
+    def __init__(self, state, clock, measurement_dir, **kwargs):
         """
         state: the txtorcon state object
         clock: this argument is normally the twisted global reactor object but
@@ -33,7 +32,7 @@ class BwScan(object):
         """
         self.state = state
         self.clock = clock
-        self.measurement_dir = os.path.join(data_dir, str(int(time.time())))
+        self.measurement_dir = measurement_dir
         self.partitions = kwargs.get('partitions', 1)
         self.this_partition = kwargs.get('this_partition', 0)
         self.scan_continuous = kwargs.get('scan_continuous', False)
@@ -60,7 +59,7 @@ class BwScan(object):
         self.state.set_attacher(SOCKSClientStreamAttacher(self.state), clock)
 
     def now(self):
-        return 1000 * time.time()
+        return time.time()
 
     def choose_file_size(self, path):
         """
@@ -109,9 +108,9 @@ class BwScan(object):
     def fetch(self, path):
         url = self.choose_url(path)
         assert None not in path
-        log.info("Downloading {url} over [{relay_fp}, {exit_fp}].", url=url,
-                 relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
-        file_size = self.choose_file_size(path)
+        log.info("Downloading file '{file_size}' over [{relay_fp}, {exit_fp}].",
+                 file_size=url.split('/')[-1], relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
+        file_size = self.choose_file_size(path)  # File size in MB
         file_hash = self.bw_files[file_size][1]
         time_start = self.now()
 
@@ -123,8 +122,11 @@ class BwScan(object):
             report = dict()
             report['time_end'] = time_end
             report['time_start'] = time_start
-            report['circ_bw'] = (len(result) * 1000) / (report['time_end'] - report['time_start'])
+            request_duration = report['time_end'] - report['time_start']
+            report['circ_bw'] = int((file_size * 1024) // request_duration)
             report['path'] = [r.id_hex for r in path]
+            log.debug("Download took {time} for {size} MB", time=request_duration,
+                      size=int(file_size // 1024))
 
             # We need to wait for these deferreds to be ready, we can't serialize
             # deferreds.
