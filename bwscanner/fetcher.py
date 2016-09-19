@@ -9,6 +9,8 @@ from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
 
+from bwscanner.logger import log
+
 
 def get_orport_endpoint(tor_state):
     proxy_endpoint = tor_state.protocol.get_conf("SocksPort")
@@ -130,14 +132,17 @@ class hashingReadBodyProtocol(protocol.Protocol):
         the Deferred closes the connection. We want to check if the deferred
         was already called to avoid raising an AlreadyCalled exception.
         """
-        if reason.check(ResponseDone):
-            self.deferred.callback(self.hash_state.hexdigest())
-        elif reason.check(PotentialDataLoss):
-            self.deferred.errback(
-                PartialDownloadError(self.status, self.message,
-                                     self.hash_state.hexdigest()))
-        elif not self.deferred.called:
-            self.deferred.errback(reason)
+        if not self.deferred.called:
+            if reason.check(ResponseDone):
+                self.deferred.callback(self.hash_state.hexdigest())
+            elif reason.check(PotentialDataLoss):
+                self.deferred.errback(
+                    PartialDownloadError(self.status, self.message,
+                                         self.hash_state.hexdigest()))
+            else:
+                self.deferred.errback(reason)
+        else:
+            log.debug("Deferred already called before connectionLost on hashingReadBodyProtocol.")
 
 
 def hashingReadBody(response):
