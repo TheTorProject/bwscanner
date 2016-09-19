@@ -7,11 +7,10 @@ import sys
 import socket
 import time
 import traceback
-import ConfigParser
 import logging
 
 import stem
-from stem.control import Controller
+import stem.connection
 from stem.descriptor.remote import DescriptorDownloader
 from stem.descriptor import DocumentHandler
 
@@ -390,33 +389,8 @@ def write_file_list(datadir):
     os.rename(datadir+"/bwfiles.new", datadir+"/bwfiles")
 
 
-def main(argv):
-    config = ConfigParser.SafeConfigParser()
-    config.read(argv[1]+"/scanner.1/bwauthority.cfg")
-
-    # Log file not currently written
-    # logfile = "data/aggregate-debug.log"
-
-    control_host = config.get('TorCtl', 'control_host')
-    control_port = config.getint('TorCtl', 'control_port')
-    control_pass = config.get('TorCtl', 'control_pass')
-
-    try:
-        c = Controller.from_port(address=control_host, port=control_port)
-    except stem.SocketError as exc:
-        logger.error("Unable to connect to Tor control port: %s", exc)
-        sys.exit(1)
-    else:
-        logger.debug("Successfully connected to the Tor control port.")
-
-    try:
-        # Stem will try read the control_aut_file automatically
-        c.authenticate(password=control_pass)
-    except stem.connection.AuthenticationFailure as exc:
-        logger.error("Unable to authenticate to Tor control port: %s", exc)
-        sys.exit(1)
-    else:
-        logger.debug("Successfully authenticated to the Tor control port.")
+def main(scan_dirs):
+    c = stem.connection.connect()
 
     ns_list = list(c.get_network_statuses())
 
@@ -453,6 +427,7 @@ def main(argv):
     # Take the most recent timestamp from each scanner
     # and use the oldest for the timestamp of the result.
     # That way we can ensure all the scanners continue running.
+    """
     scanner_timestamps = {}
     for da in argv[1:-1]:
         # First, create a list of the most recent files in the
@@ -485,12 +460,15 @@ def main(argv):
                                     newest_timestamp = timestamp
                                 bw_files.append((slicenum, timestamp, sr+"/"+f))
                     scanner_timestamps[ds] = newest_timestamp
+    """
 
     # Need to only use most recent slice-file for each node..
-    for (s, t, f) in bw_files:
-        fp = file(f, "r")
-        fp.readline()  # slicenum
-        fp.readline()  # timestamp
+
+    for scan_dir in scan_dirs:
+        fp = file(os.path.join(scan_dir, "aggregate_measurements"), "r")
+        s = fp.readline()  # slicenum
+        t = float(fp.readline())  # timestamp
+
         for l in fp.readlines():
             try:
                 line = Line(l, s, t)
@@ -590,7 +568,7 @@ def main(argv):
 
     prev_votes = None
     if cs_junk.bwauth_pid_control:
-        prev_votes = VoteSet(argv[-1])
+        prev_votes = VoteSet(scan_dirs[-1])
 
         guard_cnt = 0
         node_cnt = 0
@@ -900,13 +878,15 @@ def main(argv):
     n_print = nodes.values()
     n_print.sort(lambda x, y: int(y.pid_error*1000) - int(x.pid_error*1000))
 
+    """
     for scanner in scanner_timestamps.iterkeys():
         scan_age = int(round(scanner_timestamps[scanner], 0))
         if scan_age < time.time() - MAX_SCAN_AGE:
             logger.warning("Bandwidth scanner " + scanner + " stale. Possible dead bwauthority.py. Timestamp: " + time.ctime(scan_age))
+    """
 
-    out = file(argv[-1], "w")
-    out.write(str(scan_age)+"\n")
+    out = file(scan_dirs[-1], "w")
+    # out.write(str(scan_age)+"\n")
 
     # FIXME: Split out debugging data
     for n in n_print:
@@ -915,11 +895,11 @@ def main(argv):
             out.write("node_id=" + n.fingerprint + " bw=" + str(base10_round(n.new_bw)) + " nick=" + n.nickname + " measured_at=" + str(int(n.measured_at))+" updated_at="+str(int(n.updated_at))+" pid_error="+str(n.pid_error)+" pid_error_sum="+str(n.pid_error_sum)+" pid_bw="+str(int(n.pid_bw))+" pid_delta="+str(n.pid_delta)+" circ_fail="+str(n.circ_fail_rate)+"\n")
     out.close()
 
-    write_file_list(argv[1])
+    write_file_list(scan_dirs[0])
 
 if __name__ == "__main__":
     try:
-        main(sys.argv)
+        main(sys.argv[1:])
     except socket.error, e:
         traceback.print_exc()
         logger.warning("Socket error. Are the scanning Tors running?")
