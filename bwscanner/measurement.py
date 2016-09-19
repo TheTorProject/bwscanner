@@ -59,7 +59,7 @@ class BwScan(object):
         self.state.set_attacher(SOCKSClientStreamAttacher(self.state), clock)
 
     def now(self):
-        return 1000 * time.time()
+        return time.time()
 
     def choose_file_size(self, path):
         """
@@ -110,7 +110,7 @@ class BwScan(object):
         assert None not in path
         log.info("Downloading file '{file_size}' over [{relay_fp}, {exit_fp}].",
                  file_size=url.split('/')[-1], relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
-        file_size = self.choose_file_size(path)
+        file_size = self.choose_file_size(path)  # File size in MB
         file_hash = self.bw_files[file_size][1]
         time_start = self.now()
 
@@ -122,8 +122,11 @@ class BwScan(object):
             report = dict()
             report['time_end'] = time_end
             report['time_start'] = time_start
-            report['circ_bw'] = (len(result) * 1000) / (report['time_end'] - report['time_start'])
+            request_duration = report['time_end'] - report['time_start']
+            report['circ_bw'] = int((file_size * 1024) // request_duration)
             report['path'] = [r.id_hex for r in path]
+            log.debug("Download took {time} for {size} MB", time=request_duration,
+                      size=int(file_size // 1024))
 
             # We need to wait for these deferreds to be ready, we can't serialize
             # deferreds.
