@@ -25,11 +25,10 @@ def load_measurement_data(scan_dirs):
     measurements, failures = {}, {}
     for item in load_json_measurements(scan_dirs):
         for relay in item['path']:
-            relay_fp = relay.lstrip("%")
             if 'failure' in item:
-                failures.setdefault(relay_fp, []).append(item)
+                failures.setdefault(relay, []).append(item)
             else:
-                measurements.setdefault(relay_fp, []).append(item['circ_bw'])
+                measurements.setdefault(relay, []).append(item['circ_bw'])
 
     log.info("Loaded {success} successful measurements and {fail} failures.",
              success=len(measurements), fail=len(failures))
@@ -45,24 +44,29 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
     log.info("Loading JSON measurement files")
     measurements, failures = load_measurement_data(scan_dirs)
 
-    aggregate_file = open(os.path.join(scan_dirs[0], file_name), 'w')
+    oldest_timestamp = os.path.basename(scan_dirs[-1])
+    aggregate_filename = os.path.join(scan_dirs[0], file_name)
+    aggregate_file = open(aggregate_filename, 'w')
+
+    aggregate_file.write("0\n")  # Always use 0 as the slice number
+    aggregate_file.write(oldest_timestamp + "\n")
 
     log.info("Processing the loaded bandwidth measurements")
     for relay_fp in measurements.keys():
         log.debug("Aggregating measurements for {relay}", relay=relay_fp)
 
-        mean_bw = sum(measurements[relay_fp]) / len(measurements[relay_fp])
+        mean_bw = int(sum(measurements[relay_fp]) // len(measurements[relay_fp]))
 
         # Calculated the "filtered bandwidth"
         filtered_bws = [bw for bw in measurements[relay_fp] if bw >= mean_bw]
         if filtered_bws:
-            mean_filtered_bw = sum(filtered_bws) / len(filtered_bws)
+            mean_filtered_bw = int(sum(filtered_bws) // len(filtered_bws))
         if not filtered_bws or mean_filtered_bw <= 0:
             log.debug("Could not calculate a valid filtered bandwidth, skipping relay.")
             continue
 
-        routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp)
-        descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp)
+        routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp.lstrip("$"))
+        descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp.lstrip("$"))
         relay_routerstatus = RouterStatusEntryV3(routerstatus_info)
         relay_descriptor = RelayDescriptor(descriptor_info)
 
@@ -86,4 +90,5 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
                                                 circ_fail_rate, desc_bw, ns_bw))
 
     aggregate_file.close()
-    log.info("Finished outputting the aggregated measurements.")
+    log.info("Finished outputting the aggregated measurements to {file}.",
+             file=aggregate_filename)
