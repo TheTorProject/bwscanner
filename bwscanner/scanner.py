@@ -140,7 +140,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
 
 
 def get_recent_scans(measurement_dir):
-    return sorted([name for name in os.listdir(measurement_dir) if name.isdigit()])
+    return sorted([name for name in os.listdir(measurement_dir) if name.isdigit()],
+                  reverse=True)
 
 
 @cli.command(short_help="List available bandwidth measurement directories.")
@@ -159,28 +160,37 @@ def list(scan):
 
 
 @cli.command(short_help="Combine bandwidth measurements.")
+@click.option('-p', '--previous', type=int, default=1,
+              help='The number of recent scans to include when aggregating.')
 @click.argument('scan_name', required=False)
 @pass_scan
-def aggregate(scan, scan_name):
+def aggregate(scan, scan_name, previous):
     """
     Command to aggregate BW measurements and create the bandwidth file for the BWAuths
     """
-    if not scan_name:
+    # Aggregate the specified scan
+    if scan_name:
+        # Confirm that the specified scan directory exists
+        scan_dir_path = os.path.join(scan.measurement_dir, scan_name)
+        if not os.path.isdir(scan_dir_path):
+            log.warn("Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
+            sys.exit(-1)
+        scan_data_dirs = [scan_dir_path]
+        log.info("Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
+
+    else:
+        # Aggregate the n previous scan runs
         try:
             # Use the most recent completed scan by default
-            scan_name = get_recent_scans(scan.measurement_dir)[0]
+            recent_scan_names = get_recent_scans(scan.measurement_dir)[:previous]
         except IndexError:
-            scan_name = None
+            log.warn("Could not find any completed scan data.")
+            sys.exit(-1)
 
-    # Confirm that the specified scan directory exists
-    scan_dir_path = os.path.join(scan.measurement_dir, scan_name)
-    if not os.path.isdir(scan_dir_path):
-        log.warn("Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
-        sys.exit(-1)
+        scan_data_dirs = [os.path.join(scan.measurement_dir, name) for name in recent_scan_names]
+        log.info("Aggregating data from past {count} scans.", count=len(scan_data_dirs))
 
-    log.info("Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
-
-    scan.tor.addCallback(lambda tor: write_aggregate_data(tor, scan_dir_path))
+    scan.tor.addCallback(lambda tor: write_aggregate_data(tor, scan_data_dirs))
     scan.tor.addErrback(lambda failure: log.failure("Unexpected error"))
     scan.tor.addCallback(lambda _: reactor.stop())
     reactor.run()

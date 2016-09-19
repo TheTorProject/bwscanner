@@ -10,19 +10,20 @@ from stem.descriptor.router_status_entry import RouterStatusEntryV3
 from bwscanner.logger import log
 
 
-def load_json_measurements(directory):
-    for name in glob.glob(os.path.join(directory, "*.json")):
-        with open(os.path.join(directory, name), 'r') as json_file:
-            try:
-                for y in json.load(json_file):
-                    yield dict(y)
-            except ValueError:
-                log.error("Error reading JSON measurement file")
+def load_json_measurements(scan_dirs):
+    for directory in scan_dirs:
+        for name in glob.glob(os.path.join(directory, "*.json")):
+            with open(os.path.join(directory, name), 'r') as json_file:
+                try:
+                    for y in json.load(json_file):
+                        yield dict(y)
+                except ValueError:
+                    log.error("Error reading JSON measurement file")
 
 
-def load_measurement_data(measurement_directory):
+def load_measurement_data(scan_dirs):
     measurements, failures = {}, {}
-    for item in load_json_measurements(measurement_directory):
+    for item in load_json_measurements(scan_dirs):
         for relay in item['path']:
             relay_fp = relay.lstrip("%")
             if 'failure' in item:
@@ -36,15 +37,15 @@ def load_measurement_data(measurement_directory):
 
 
 @inlineCallbacks
-def write_aggregate_data(tor, measurement_dir, file_name="aggregate_measurements"):
+def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
     # Get a tor controller connection, to obtain consensus bandwidth values
     # XXX: Should this data be saved from the consensus at scan time.
 
     # FIXME: how do we know when all these things are downloaded??
     log.info("Loading JSON measurement files")
-    measurements, failures = load_measurement_data(measurement_dir)
+    measurements, failures = load_measurement_data(scan_dirs)
 
-    aggregate_file = open(os.path.join(measurement_dir, file_name), 'w')
+    aggregate_file = open(os.path.join(scan_dirs[0], file_name), 'w')
 
     log.info("Processing the loaded bandwidth measurements")
     for relay_fp in measurements.keys():
