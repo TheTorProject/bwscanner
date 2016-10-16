@@ -21,10 +21,11 @@ class PermutationsTests(unittest.TestCase):
             iterations=1 )
 
         all_partitions = []
-        for partition_id in xrange(partitions):
+        for partition_id in range(partitions):
             print "partition %d" % partition_id
             partition = [circuit for circuit in
                          lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
+            print "partition size %d" % len(partition)
             all_partitions += partition
-        
-        self.assertEqual(len(all_partitions), total_relays**2)
+        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
