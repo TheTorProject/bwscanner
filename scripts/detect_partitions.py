@@ -8,6 +8,7 @@ partitions where some relays are not able to connect to other relays.
 
 import click
 import sys
+import hashlib
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -22,13 +23,16 @@ from bwscanner.partition_scan import ProbeAll2HopCircuits
 @click.command()
 @click.option('--tor-control', default=None, type=str, help="tor control port as twisted endpoint descriptor string")
 @click.option('--tor-data', default=None, type=str, help="launch tor data directory")
+@click.option('--log-dir', default="./logs", type=str, help="log directory")
 @click.option('--relays-file', default=None, type=str, help="file containing serialized list of tor router objects")
 @click.option('--secret', default=None, type=str, help="secret")
 @click.option('--partitions', default=None, type=int, help="total number of permuation partitions")
 @click.option('--this-partition', default=None, type=int, help="which partition to scan")
 @click.option('--build-duration', default=0.2, type=float, help="circuit build duration")
 @click.option('--circuit-timeout', default=10.0, type=float, help="circuit build timeout")
-def main(tor_control, tor_data, relays_file, secret, partitions, this_partition, build_duration, circuit_timeout):
+def main(tor_control, tor_data, log_dir, relays_file,
+         secret, partitions, this_partition, build_duration, circuit_timeout):
+
     log.startLogging( sys.stdout )
     def start_tor():
         config = txtorcon.TorConfig()
@@ -63,7 +67,7 @@ def main(tor_control, tor_data, relays_file, secret, partitions, this_partition,
     else:
         print "using tor control port..."
         endpoint = clientFromString(reactor, tor_control.encode('utf-8'))
-        d = txtorcon.build_tor_connection(endpoint, build_state=False)
+        d = txtorcon.build_tor_connection(endpoint, build_state=True)
 
     with open(relays_file, "r") as rf:
         relay_lines = rf.read()
@@ -71,11 +75,13 @@ def main(tor_control, tor_data, relays_file, secret, partitions, this_partition,
 
     secret_hash = hashlib.sha256(secret).digest()
     def start_probe(tor_state):
-        for relay_line in relay_lines:
-            relay = tor_state.router_from_id(relay_line.rstrip())
+        for relay_line in relay_lines.split():
+            relay = tor_state.router_from_id(relay_line)
             relays.append(relay)
-        probe = ProbeAll2HopCircuits(tor_state, reactor, './logs', reactor.stop, relays, secret_hash,
+        print "end of relay serialization"
+        probe = ProbeAll2HopCircuits(tor_state, reactor, log_dir, reactor.stop, relays, secret_hash,
                                      partitions, this_partition, build_duration, circuit_timeout)
+        print "starting scan"
         probe.start()
     d.addCallback(start_probe)
     reactor.run()
