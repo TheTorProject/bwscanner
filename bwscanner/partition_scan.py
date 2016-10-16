@@ -5,6 +5,7 @@ and it may indicate that a partitioning attack is being performed.
 """
 import time
 import hashlib
+from twisted.internet.error import AlreadyCalled
 from twisted.internet import defer
 from txtorcon.circuit import build_timeout_circuit, CircuitBuildTimedOutError
 
@@ -43,12 +44,13 @@ class ProbeAll2HopCircuits(object):
         self.shared_secret = shared_secret
         self.partitions = partitions
         self.this_partition = this_partition
+        self.circuit_life_duration = circuit_timeout
+        self.circuit_build_duration = build_duration
 
         self.lazy_tail = defer.succeed(None)
         self.tasks = []
 
         consensus = ""
-        # XXX fix me
         for relay in [str(relay.id_hex) for relay in relays]:
             consensus += relay + ","
         consensus_hash = hashlib.sha256(consensus).digest()
@@ -58,8 +60,6 @@ class ProbeAll2HopCircuits(object):
 
         # XXX adjust me
         self.result_sink = ResultSink(log_dir, chunk_size=1000)
-        self.circuit_life_duration = circuit_timeout
-        self.circuit_build_duration = build_duration
 
     def now(self):
         return 1000 * time.time()
@@ -68,10 +68,7 @@ class ProbeAll2HopCircuits(object):
         """
         Serialize a route.
         """
-        route_list = []
-        for router in route:
-            route_list.append("%r" % (router,))
-        return route_list
+        return "%s -> %s" % (route[0].id_hex, route[1].id_hex)
 
     def build_circuit(self, route):
         """
@@ -80,24 +77,13 @@ class ProbeAll2HopCircuits(object):
         """
         serialized_route = self.serialize_route(route)
 
-        def circuit_build_report(result):
-            # XXX todo: remove logging of successful circuit build
-            time_end = self.now()
-            self.result_sink.send({"time_start": time_start,
-                                   "time_end": time_end,
-                                   "path": serialized_route,
-                                   "status": "ok",
-                                   "info": None})
-            return None
-
         def circuit_build_timeout(f):
             f.trap(CircuitBuildTimedOutError)
             time_end = self.now()
             self.result_sink.send({"time_start": time_start,
                                    "time_end": time_end,
                                    "path": serialized_route,
-                                   "status": "timeout",
-                                   "info": None})
+                                   "status": "timeout"})
             return None
 
         def circuit_build_failure(f):
@@ -105,13 +91,11 @@ class ProbeAll2HopCircuits(object):
             self.result_sink.send({"time_start": time_start,
                                    "time_end": time_end,
                                    "path": serialized_route,
-                                   "status": "failure",
-                                   "info": None})
+                                   "status": "failure"})
             return None
 
         time_start = self.now()
         d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
-        d.addCallback(circuit_build_report)  # XXX todo: remove logging of successful circuit build
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
         self.tasks.append(d)
@@ -119,12 +103,17 @@ class ProbeAll2HopCircuits(object):
     def start(self):
         def pop():
             try:
-                self.build_circuit(self.circuits.next())
+                route = self.circuits.next()
+                print self.serialize_route(route)
+                self.build_circuit(route)
             except StopIteration:
+                try:
+                    self.call_id.cancel()
+                except AlreadyCalled:
+                    pass
                 dl = defer.DeferredList(self.tasks)
                 dl.addCallback(lambda ign: self.result_sink.end_flush())
                 dl.addCallback(lambda ign: self.stopped())
-                self.call_id.cancel()
             else:
                 self.call_id = self.clock.callLater(self.circuit_build_duration, pop)
         self.clock.callLater(0, pop)
