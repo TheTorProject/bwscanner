@@ -142,7 +142,7 @@ def lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed):
                     continue
                 unique += 1
                 if unique % partitions == this_partition:
-                    yield (x, y, this_partition)  # for real usage we'd probably discard node_id
+                    yield (x, y)
             # come up with a random set size (we pop a small set of )
             set_size = 10 + partitions + shared_prng.next_bounded(1000)
             indexes = []

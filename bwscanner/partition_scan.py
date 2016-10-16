@@ -47,7 +47,11 @@ class ProbeAll2HopCircuits(object):
         self.lazy_tail = defer.succeed(None)
         self.tasks = []
 
-        consensus_hash = hashlib.sha256([str(relay) for relay in relays].join(",")).digest()
+        consensus = ""
+        # XXX fix me
+        for relay in [str(relay.id_hex) for relay in relays]:
+            consensus += relay + ","
+        consensus_hash = hashlib.sha256(consensus).digest()
         shared_secret_hash = hashlib.sha256(shared_secret).digest()
         prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
         self.circuits = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
