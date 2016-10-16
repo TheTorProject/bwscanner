@@ -1,9 +1,8 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
 import hashlib
 from math import sqrt
 
-############ algorithms:
 
 class yolo_prng():
   """Basic inefficient HMAC-based PRNG generator."""
@@ -90,78 +89,51 @@ def pick_coordinates(i, maxx):
   assert i < maxx * maxx
   return (i % maxx, i / maxx)
 
-############ set parameters:
 
-# the ordered list of relays in the consensus:
-tor_relays = ['A','B','C', 'E', 'F', 'G']
-
-# the hash of the consensus (don't necessarily need to compute it here)
-consensus_hash = hashlib.sha256('REPLACEME - whatever').digest()
-
-# a secret random value shared between all nodes (site-specific):
-shared_secret = hashlib.sha256('REPLACEME - fuck global observers').digest()
-
-prng_seed = hashlib.pbkdf2_hmac(
-                'sha256',
-                consensus_hash,
-                shared_secret, 
-                iterations=1 )
-
-############ initialize prng and shuffle
-
-def shuffle_sets():
-  shared_prng = yolo_prng(prng_seed, purpose = 'relay shuffle')
-
+def shuffle_sets(relays, prng_seed):
+  shared_prng = yolo_prng(prng_seed)
   shuffled_sets = map(lambda _: [], xrange(2)) # 2 == circuit length
-
   for hop_number in xrange(2): # 2 == circuit length
     # we shuffle the set of relays twice, to get two independent lists
     # (to spread the coordinates over more nodes)
-    shuffled_sets[hop_number] = tuple(fisher_yates_shuffle(tor_relays, shared_prng))
+    shuffled_sets[hop_number] = tuple(fisher_yates_shuffle(relays, shared_prng))
   return shuffled_sets
 
-shuffled_sets = shuffle_sets()
 
-############ pick connection pairs:
 
-def pair_generator(node_id = None, number_of_nodes = None):
-  shared_prng = yolo_prng(prng_seed, purpose = 'pair generator')
-  prime = pick_prime(len(tor_relays), shared_prng)
-  elements = len(tor_relays) ** 2
+def lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed):
+    """
+    factory of lazy generator for shuffled 2-hop circuits with low cpu
+    and memory requirements and a partitioning scheme to facilitate
+    parallelizing the scan of the entire shuffled set.
 
-  idx = 0
-  indexes = []
-  set_size = 1
+    relays: the total list of relays for a given Tor consensus
+    this_partition: the partition id corresponding to this generator
+    partitions: total number of partitions
+    prng_seed: prnd seed which is a shared secret for all scanner hosts
+    """
+    shared_prng = yolo_prng(prng_seed)
+    prime = pick_prime(len(relays), shared_prng)
+    elements = len(relays) ** 2
+    idx = 0
+    indexes = []
+    set_size = 1
+    shuffled_sets = shuffle_sets(relays, prng_seed)
 
-  for offset in xrange(elements + 1):
-    if offset % set_size == 0 or offset == elements:
-      indexes = fisher_yates_shuffle(indexes, shared_prng)
-      unique = 0
-      for i in xrange(len(indexes)):
-        a , b = pick_coordinates(indexes[i], len(tor_relays))
-        x , y = shuffled_sets[0][a] , shuffled_sets[1][b]
-        if x == y: continue
-        unique += 1
-        if unique % number_of_nodes == node_id:
-          yield (x , y, node_id) # for real usage we'd probably discard node_id
-      # come up with a random set size (we pop a small set of )
-      set_size = 10 + number_of_nodes + shared_prng.next_bounded(1000)
-      indexes = []
-    idx = (idx + prime) % elements
-    indexes.append(idx)
-    if offset == elements: return
-
-############ sample usage:
-
-pairg = pair_generator(node_id = 0, number_of_nodes = 3)
-try:
-  while True:
-    print pairg.next()
-except StopIteration: pass
-
-for x in pair_generator(node_id = 1, number_of_nodes = 3):
-  print x
-
-for x in pair_generator(node_id = 2, number_of_nodes = 3):
-  print x
-
+    for offset in xrange(elements + 1):
+        if offset % set_size == 0 or offset == elements:
+            indexes = fisher_yates_shuffle(indexes, shared_prng)
+            unique = 0
+            for i in xrange(len(indexes)):
+                a , b = pick_coordinates(indexes[i], len(relays))
+                x , y = shuffled_sets[0][a] , shuffled_sets[1][b]
+                if x == y: continue
+                unique += 1
+                if unique % partitions == this_partition:
+                    yield (x , y, this_partition) # for real usage we'd probably discard node_id
+            # come up with a random set size (we pop a small set of )
+            set_size = 10 + partitions + shared_prng.next_bounded(1000)
+            indexes = []
+        idx = (idx + prime) % elements
+        indexes.append(idx)
+        if offset == elements: return

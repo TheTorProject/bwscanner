@@ -3,8 +3,7 @@
 Two-Hop Relay Connectivity Tester
 
 A scanner to probe all possible two hop circuits to detect network
-partitioning problems where some relays are not able to connect to other
-relays.
+partitions where some relays are not able to connect to other relays.
 """
 
 import click
@@ -60,7 +59,17 @@ def main(tor_control, tor_data):
         endpoint = clientFromString(reactor, tor_control.encode('utf-8'))
         d = txtorcon.build_tor_connection(endpoint, build_state=False)
 
-    d.addCallback( ProbeAll2HopCircuits, reactor, './logs', stopped=reactor.stop )
+    # XXX fix me; these should be provided on the commandline
+    # relays should deserialized from a file
+    relays = ""
+    secret = ""
+    partitions = None
+    this_partition = None
+    build_duration = None
+    circuit_timeout = None
+    probe = ProbeAll2HopCircuits(reactor, './logs', reactor.stop, relays, secret,
+                         partitions, this_partition, build_duration, circuit_timeout)
+    d.addCallback( probe.start )
     reactor.run()
 
 if __name__ == '__main__':
