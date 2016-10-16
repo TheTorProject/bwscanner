@@ -3,7 +3,8 @@ This scanner is used detect partition Tor network partitions.
 Relays which cannot connect to each other are bad for Tor network health
 and it may indicate that a partitioning attack is being performed.
 """
-import time, hashlib
+import time
+import hashlib
 from twisted.internet import defer
 from txtorcon.circuit import build_timeout_circuit, CircuitBuildTimedOutError
 
@@ -44,17 +45,12 @@ class ProbeAll2HopCircuits(object):
         self.this_partition = this_partition
 
         self.lazy_tail = defer.succeed(None)
+        self.tasks = []
 
         consensus_hash = hashlib.sha256([str(relay) for relay in relays].join(",")).digest()
         shared_secret_hash = hashlib.sha256(shared_secret).digest()
-        prng_seed = hashlib.pbkdf2_hmac(
-            'sha256',
-            consensus_hash,
-            shared_secret_hash, 
-            iterations=1 )
-
+        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
         self.circuits = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
-        self.tasks = []
 
         # XXX adjust me
         self.result_sink = ResultSink(log_dir, chunk_size=1000)
@@ -111,7 +107,7 @@ class ProbeAll2HopCircuits(object):
 
         time_start = self.now()
         d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
-        d.addCallback(circuit_build_report) # XXX todo: remove logging of successful circuit build
+        d.addCallback(circuit_build_report)  # XXX todo: remove logging of successful circuit build
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
         self.tasks.append(d)

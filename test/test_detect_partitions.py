@@ -13,13 +13,7 @@ class PermutationsTests(unittest.TestCase):
         partitions = 4
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-
-        prng_seed = hashlib.pbkdf2_hmac(
-            'sha256',
-            consensus_hash,
-            shared_secret, 
-            iterations=1 )
-
+        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
             print "partition %d" % partition_id

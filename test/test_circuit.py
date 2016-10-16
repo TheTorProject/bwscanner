@@ -31,6 +31,7 @@ class TestCircuitGenerators(TorTestCase):
     def test_there_and_back_again(self):
         pass
 
+
 def expand_circuit_generator(circuit_generator, circuits):
     """
     Update a dictionary from a circuit generator.
