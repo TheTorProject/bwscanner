@@ -1,6 +1,5 @@
-from random import randint
 
-from bwscanner.circuit import ExitScan, TwoHop, FullyConnected
+from bwscanner.circuit import ExitScan, TwoHop
 from test.template import TorTestCase
 
 
@@ -31,27 +30,6 @@ class TestCircuitGenerators(TorTestCase):
 
     def test_there_and_back_again(self):
         pass
-
-    def test_fully_connected_single(self):
-        # this will take a while to run
-        circuits = {}
-        expand_circuit_generator(FullyConnected(self.tor), circuits)
-
-        for neighbors in circuits.itervalues():
-            assert len(neighbors) == len(self.routers)
-        assert len(circuits.keys()) == len(self.routers)
-
-    def test_fully_connected_parts(self):
-        n_parts = randint(3, 27)
-        generators = [FullyConnected(self.tor, this_partition=i,
-                                     partitions=n_parts) for i in xrange(n_parts)]
-        circuits = {}
-        for generator in generators:
-            expand_circuit_generator(generator, circuits)
-
-        for neighbors in circuits.itervalues():
-            assert len(neighbors) == len(self.routers)
-        assert len(circuits.keys()) == len(self.routers)
 
 
 def expand_circuit_generator(circuit_generator, circuits):
