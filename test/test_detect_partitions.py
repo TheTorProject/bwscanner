@@ -1,5 +1,6 @@
 
 import hashlib
+
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 from twisted.internet import defer, task
@@ -42,34 +43,23 @@ class PermutationsGeneratorTests(unittest.TestCase):
         self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
 
     def test_permutations(self):
-        raise unittest.SkipTest("broken")
-
-        class FakeTorState(object):
-            def __init__(self, routers):
-                self.routers = routers
         total_relays = 40
-        routers = dict()  # name -> router
+        routers = []
         for n in range(total_relays):
-            name = "relay%d" % n
-            routers.update(dict([(name, FakeRouter(name, name))]))
+            routers.append("relay%d" % n)
         this_partition = 0
         partitions = 3
+
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
         prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
-        circuit_generator = lazy2HopCircuitGenerator(routers.values(), this_partition,
+        circuit_generator = lazy2HopCircuitGenerator(routers, this_partition,
                                                      partitions, prng_seed)
-        expected = [('relay15', 'relay33'),
-                    ('relay29', 'relay38'),
-                    ('relay30', 'relay25'),
-                    ('relay12', 'relay2'),
-                    ('relay21', 'relay38'),
-                    ('relay37', 'relay34'),
-                    ('relay31', 'relay1'),
-                    ('relay21', 'relay18'),
-                    ('relay24', 'relay22'),
-                    ('relay16', 'relay25')]
         circuits = map(lambda x: (str(x[0]), str(x[1])), [circuit for circuit in circuit_generator])
+        expected = [('relay17', 'relay25'), ('relay10', 'relay26'), ('relay8', 'relay3'),
+                    ('relay20', 'relay37'), ('relay7', 'relay26'), ('relay29', 'relay28'),
+                    ('relay12', 'relay38'), ('relay7', 'relay14'), ('relay2', 'relay4'),
+                    ('relay16', 'relay3')]
         self.failUnlessEqual(circuits[:10], expected)
 
 
