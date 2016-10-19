@@ -25,7 +25,26 @@ class FakeRouter:
 
 class PermutationsGeneratorTests(unittest.TestCase):
 
-    def test_shuffle_generator(self):
+    def test_shuffle_generator1(self):
+        total_relays = 5
+        relays = [x for x in range(total_relays)]
+        partitions = 3
+        consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
+        shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
+        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        all_partitions = []
+        for partition_id in range(partitions):
+            print "partition %d" % partition_id
+            partition = [circuit for circuit in
+                         lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
+            for c in partition:
+                print c
+            print "partition size %d" % len(partition)
+            all_partitions += partition
+        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
+
+    def test_shuffle_generator2(self):
         total_relays = 80
         relays = [x for x in range(total_relays)]
         partitions = 4
