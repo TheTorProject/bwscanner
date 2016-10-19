@@ -9,6 +9,7 @@ partitions where some relays are not able to connect to other relays.
 import click
 import sys
 import hashlib
+import signal
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -30,8 +31,10 @@ from bwscanner.partition_scan import ProbeAll2HopCircuits
 @click.option('--this-partition', default=None, type=int, help="which partition to scan")
 @click.option('--build-duration', default=0.2, type=float, help="circuit build duration")
 @click.option('--circuit-timeout', default=10.0, type=float, help="circuit build timeout")
+@click.option('--prometheus-port', default=None, type=int, help="prometheus port to listen on")
+@click.option('--prometheus-interface', default=None, type=str, help="prometheus interface to listen on")
 def main(tor_control, tor_data, log_dir, relays_file,
-         secret, partitions, this_partition, build_duration, circuit_timeout):
+         secret, partitions, this_partition, build_duration, circuit_timeout, prometheus_port, prometheus_interface):
 
     log.startLogging( sys.stdout )
     def start_tor():
@@ -80,9 +83,15 @@ def main(tor_control, tor_data, log_dir, relays_file,
             relays.append(relay)
         print "end of relay serialization"
         probe = ProbeAll2HopCircuits(tor_state, reactor, log_dir, reactor.stop, relays, secret_hash,
-                                     partitions, this_partition, build_duration, circuit_timeout)
+                                     partitions, this_partition, build_duration, circuit_timeout, prometheus_port, prometheus_interface)
         print "starting scan"
         probe.start()
+        def signal_handler(signal, frame):
+            print "signal caught, stopping probe"
+            d = probe.stop()
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+
     d.addCallback(start_probe)
     reactor.run()
 
