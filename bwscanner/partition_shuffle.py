@@ -2,48 +2,85 @@
 
 from pyblake2 import blake2b
 from math import sqrt, ceil, log
+from struct import unpack
 
 
 class yolo_prng():
     """Basic inefficient HMAC-based PRNG generator."""
     hash_output_length = 32
+    pack_table = {1:'B', 2:'H', 3:'>I', 4:'I', 5:'>Q', 6:'>Q'} # bigendian if we prepend 0x00
+    prepend_table = {1:'', 2:'', 3:'\x00', 4: '', 5: '\x00\x00\x00', 6: '\x00\x00'}
 
     def __init__(self, seed, stream_index=0):
         self.seed = seed
         self.stream_index = stream_index
+        self.cached_hmac_generation = None
+        self.compute_current()
+
+    def compute_current(self):
+        this_hmac_generation = self.stream_index / self.hash_output_length
+        if this_hmac_generation > self.cached_hmac_generation:
+#            self.current = hashlib.pbkdf2_hmac(self.hash_algorithm,
+#                                               self.seed, str(this_hmac_generation), iterations=1)
+            b = blake2b(data=self.seed, key=str(this_hmac_generation), digest_size=self.hash_output_length)
+            self.current = b.digest()
+            self.cached_hmac_generation = this_hmac_generation
 
     def next_bytes(self, length):
         # resume previous position, if given
-        hmac_generation = self.stream_index / self.hash_output_length
-        byte_offset = self.stream_index % self.hash_output_length
         buf = ''
-        bytes_to_read = length
-        while len(buf) < length:
-            b = blake2b(data=self.seed, key=str(hmac_generation), digest_size=self.hash_output_length)
-            current = b.digest()
-            buf += current[byte_offset:byte_offset + bytes_to_read]
-            bytes_to_read -= self.hash_output_length - byte_offset
-            byte_offset = 0
-            hmac_generation += 1
-        self.stream_index += length
+        total_bytes_read = 0
+        # old_stream_idx = self.stream_index
+        byte_offset = self.stream_index % self.hash_output_length
+        old_stream_idx = self.stream_index
+        if byte_offset != 0:
+            total_bytes_read = self.hash_output_length - byte_offset
+            if total_bytes_read > length:
+                self.stream_index += length
+                return self.current[byte_offset:byte_offset+length]
+            buf += self.current[byte_offset : ]
+            self.stream_index += total_bytes_read
+        for i in xrange((length-total_bytes_read) / self.hash_output_length):
+            self.compute_current()
+            buf += self.current
+            self.stream_index += self.hash_output_length
+            total_bytes_read += self.hash_output_length
+        self.compute_current()
+        if total_bytes_read < length:
+            byte_offset = self.stream_index % self.hash_output_length
+            bytes_to_read = length - total_bytes_read
+            assert bytes_to_read < self.hash_output_length
+            buf += self.current[:bytes_to_read]
+            self.stream_index += bytes_to_read
+            total_bytes_read += bytes_to_read
+        assert total_bytes_read == length
+        assert old_stream_idx + total_bytes_read == self.stream_index
         return buf
 
     def next_bounded(self, maximum):
         """Returns values in the set [0 ; .. ; maximum]"""
+        # XXX this is slow as fuck because we end up rejecting tons of numbers
         if 0 == maximum:
             return 0
 
         prng_bytes_to_read = int(ceil(log(1 + maximum, 256)))
-        assert 0 < prng_bytes_to_read
+        assert 9 > prng_bytes_to_read
+        this_pack_fmt = self.pack_table[prng_bytes_to_read] # find the best fit
         word = 1 + maximum  # in the absense of do..while()
+        # rejected_count = 0
         while word >= maximum:
             prng_bytes = self.next_bytes(prng_bytes_to_read)
             # interpret them as an unsigned integer:
-            word = int(prng_bytes.encode('hex'), 0x10)
-            # adjust for modulo bias by discarding word if larger than our set:
-            if word <= maximum or 0 == (1+maximum) % (256**prng_bytes_to_read):
-                return word
+            #word = int(prng_bytes.encode('hex'), 0x10)
+            word = unpack(this_pack_fmt,
+                        self.prepend_table[prng_bytes_to_read] + prng_bytes
+            )[0] & ((1<<(8*prng_bytes_to_read))-1)
 
+            # TODO actually yeah fuck that, unless we bother counting bits, that's
+            # a major bottleneck, so let's accept biased output after some attempts.
+            #if word <= maximum or rejected_count > 3: # or 0 == (1+maximum) % (256**prng_bytes_to_read):
+            return word % (1+maximum)
+            # rejected_count += 1
 
 def fisher_yates_shuffle(source, prng):
     """
@@ -63,7 +100,7 @@ def fisher_yates_shuffle(source, prng):
         # j <- random integer such that 0 <= j <= i
         j = prng.next_bounded(i)
         assert 0 <= j and j <= i
-        if j == len(a):
+        if j == i:
             a.append(source[i])
         else:
             a.append(a[j])
@@ -86,7 +123,7 @@ def pick_prime(number_of_relays, prng):
         # next odd number:
         candidate += 2
         # check all odd numbers between 3 and sqrt(candidate)
-        for x in range(3, 1 + int(sqrt(candidate)), 2):
+        for x in xrange(3, 1 + int(sqrt(candidate)), 2):
             if candidate % x == 0:
                 break
         else:  # if no factors are found:
@@ -123,11 +160,12 @@ def lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed):
     prng_seed: prnd seed which is a shared secret for all scanner hosts
     """
     shared_prng = yolo_prng(prng_seed)
-    prime = pick_prime(len(relays), shared_prng)
-    elements = len(relays) ** 2
+    relays_len = len(relays)
+    prime = pick_prime(relays_len, shared_prng)
+    elements = relays_len ** 2
     idx = 0
     indexes = []
-    set_size = 1
+    set_size = 200
     shuffled_sets = shuffle_sets(relays, prng_seed)
 
     for offset in xrange(elements + 1):
@@ -135,7 +173,7 @@ def lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed):
             indexes = fisher_yates_shuffle(indexes, shared_prng)
             unique = 0
             for i in xrange(len(indexes)):
-                a, b = pick_coordinates(indexes[i], len(relays))
+                a, b = pick_coordinates(indexes[i], relays_len)
                 x, y = shuffled_sets[0][a], shuffled_sets[1][b]
                 if x == y:
                     continue
@@ -143,7 +181,7 @@ def lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed):
                 if unique % partitions == this_partition:
                     yield (x, y)
             # come up with a random set size (we pop a small set of )
-            set_size = 10 + partitions + shared_prng.next_bounded(1000)
+            set_size = 100 + partitions + shared_prng.next_bounded(255)
             indexes = []
         idx = (idx + prime) % elements
         indexes.append(idx)
