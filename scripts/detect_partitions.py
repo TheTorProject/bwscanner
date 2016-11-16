@@ -10,7 +10,6 @@ import click
 import sys
 import hashlib
 import signal
-from stem.descriptor import parse_file, DocumentHandler
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -18,8 +17,10 @@ from twisted.internet.endpoints import clientFromString
 
 import txtorcon
 from txtorcon import TorState
+from stem.descriptor import parse_file
 
 from bwscanner.partition_scan import ProbeAll2HopCircuits
+from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
 
 def get_router_list_from_consensus(tor_state, consensus):
     """
@@ -49,7 +50,7 @@ def get_router_list_from_file(tor_state, relay_list_file):
         a list of routers (txtorcon Router router object)
     """
     routers = []
-    with open(relays_list_file, "r") as rf:
+    with open(relay_list_file, "r") as rf:
         relay_lines = rf.read()
     for relay_line in relay_lines.split():
         router = tor_state.router_from_id("$" + relay_line)
@@ -109,7 +110,6 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
         endpoint = clientFromString(reactor, tor_control.encode('utf-8'))
         d = txtorcon.build_tor_connection(endpoint, build_state=True)
 
-    secret_hash = hashlib.sha256(secret).digest()
     def start_probe(tor_state):
         if consensus is not None:
             routers = get_router_list_from_consensus(tor_state, consensus)
@@ -118,13 +118,21 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
         else:
             pass  # XXX todo: print usage
 
-        probe = ProbeAll2HopCircuits(tor_state, reactor, log_dir, reactor.stop, routers, secret_hash,
-                                     partitions, this_partition, build_duration, circuit_timeout, prometheus_port, prometheus_interface)
+        consensus = ""
+        for relay in [str(relay.id_hex) for relay in routers]:
+            consensus += relay + ","
+        consensus_hash = hashlib.sha256(consensus).digest()
+        shared_secret_hash = hashlib.sha256(secret).digest()
+        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
+        circuit_generator = lazy2HopCircuitGenerator(routers, this_partition, partitions, prng_seed)
+        probe = ProbeAll2HopCircuits(tor_state, reactor, log_dir, reactor.stop,
+                                     partitions, this_partition, build_duration, circuit_timeout,
+                                     circuit_generator, prometheus_port, prometheus_interface)
         print "starting scan"
         probe.start()
         def signal_handler(signal, frame):
             print "signal caught, stopping probe"
-            d = probe.stop()
+            probe.stop()
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 

@@ -136,9 +136,17 @@ class ProbeTests(unittest.TestCase):
         this_partition = 0
         build_duration = .2
         circuit_timeout = 10
+
+        consensus = ""
+        for relay in [str(relay.id_hex) for relay in relays]:
+            consensus += relay + ","
+        consensus_hash = hashlib.sha256(consensus).digest()
+        shared_secret_hash = hashlib.sha256(secret).digest()
+        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
+        circuit_generator = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
         probe = ProbeAll2HopCircuits(tor_state, clock, log_dir, stopped,
-                                     relays, secret, partitions, this_partition,
-                                     build_duration, circuit_timeout)
+                                     partitions, this_partition,
+                                     build_duration, circuit_timeout, circuit_generator)
         probe.start()
         for _ in range(len(relays)**2 - len(relays)):
             try:
