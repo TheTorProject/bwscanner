@@ -92,15 +92,25 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
             d2.addCallback(lambda state: state.protocol)
             return d2
 
-        d = get_random_tor_ports().addCallback(launch_and_get_protocol)
+        d3 = get_random_tor_ports().addCallback(launch_and_get_protocol)
         def change_torrc(result):
             config.UseEntryGuards=0
             d2 = config.save()
             d2.addCallback(lambda ign: result)
             return d2
-        d.addCallback(change_torrc)
-        d.addCallback(lambda protocol: TorState.from_protocol(protocol))
-        return d
+        d3.addCallback(change_torrc)
+        d3.addCallback(lambda protocol: TorState.from_protocol(protocol))
+        return d3
+
+    def gather_relays(tor_state):
+        if consensus is not None:
+            routers = get_router_list_from_consensus(tor_state, consensus)
+        elif relay_list is not None:
+            routers = get_router_list_from_file(tor_state, relay_list)
+        else:
+            print "wtf"
+            os.exit(1)
+        return (tor_state, routers)
 
     if tor_control is None:
         print "launching tor..."
@@ -110,14 +120,10 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
         endpoint = clientFromString(reactor, tor_control.encode('utf-8'))
         d = txtorcon.build_tor_connection(endpoint, build_state=True)
 
-    def start_probe(tor_state):
-        if consensus is not None:
-            routers = get_router_list_from_consensus(tor_state, consensus)
-        elif relay_list is not None:
-            routers = get_router_list_from_file(tor_state, relay_list)
-        else:
-            pass  # XXX todo: print usage
+    d.addCallback(gather_relays)
 
+    def start_probe(args):
+        tor_state, routers = args
         consensus = ""
         for relay in [str(relay.id_hex) for relay in routers]:
             consensus += relay + ","
