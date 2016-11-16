@@ -72,9 +72,9 @@ def main(relay_list, consensus, secret, partitions, this_partition):
     consensus_hash = hashlib.sha256(consensus).digest()
     shared_secret_hash = hashlib.sha256(secret).digest()
     key = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
-    #circuit_generator = lazy2HopCircuitGenerator(relays, this_partition, partitions, key)
-    key = os.urandom(208)
-    circuit_generator = to_pair_circuit_generator(relays, this_partition, partitions, key)
+    circuit_generator = lazy2HopCircuitGenerator(relays, this_partition, partitions, key)
+    #key = os.urandom(208)
+    #circuit_generator = to_pair_circuit_generator(relays, this_partition, partitions, key)
 
     while True:
         route = circuit_generator.next()

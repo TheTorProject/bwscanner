@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-import hashlib
+from pyblake2 import blake2b
 from math import sqrt, ceil, log
 
 
 class yolo_prng():
     """Basic inefficient HMAC-based PRNG generator."""
-    hash_output_length = 32  # for sha256
-    hash_algorithm = 'sha256'
+    hash_output_length = 32
 
     def __init__(self, seed, stream_index=0):
         self.seed = seed
@@ -20,8 +19,8 @@ class yolo_prng():
         buf = ''
         bytes_to_read = length
         while len(buf) < length:
-            current = hashlib.pbkdf2_hmac(self.hash_algorithm,
-                                          self.seed, str(hmac_generation), iterations=1)
+            b = blake2b(data=self.seed, key=str(hmac_generation), digest_size=self.hash_output_length)
+            current = b.digest()
             buf += current[byte_offset:byte_offset + bytes_to_read]
             bytes_to_read -= self.hash_output_length - byte_offset
             byte_offset = 0
