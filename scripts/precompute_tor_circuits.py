@@ -8,11 +8,12 @@ shuffle generators
 import click
 import sys
 import hashlib
-import signal
+import os
 
 from stem.descriptor import parse_file
 
 from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
+from bwscanner.partition_to_pair import to_pair_circuit_generator
 
 
 def get_router_list_from_consensus(consensus):
@@ -59,19 +60,21 @@ def get_router_list_from_file(relay_list_file):
 def main(relay_list, consensus, secret, partitions, this_partition):
 
     if consensus is not None:
-        routers = get_router_list_from_consensus(consensus)
+        relays = get_router_list_from_consensus(consensus)
     elif relay_list is not None:
-        routers = get_router_list_from_file(relay_list)
+        relays = get_router_list_from_file(relay_list)
     else:
         pass  # XXX todo: print usage
 
     consensus = ""
-    for relay in routers:
+    for relay in relays:
         consensus += relay + ","
     consensus_hash = hashlib.sha256(consensus).digest()
     shared_secret_hash = hashlib.sha256(secret).digest()
-    prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
-    circuit_generator = lazy2HopCircuitGenerator(routers, this_partition, partitions, prng_seed)
+    key = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
+    #circuit_generator = lazy2HopCircuitGenerator(relays, this_partition, partitions, key)
+    key = os.urandom(208)
+    circuit_generator = to_pair_circuit_generator(relays, this_partition, partitions, key)
 
     while True:
         route = circuit_generator.next()
