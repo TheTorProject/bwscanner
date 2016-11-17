@@ -40,6 +40,7 @@ class ProbeAll2HopCircuits(object):
 
     def __init__(self, state, clock, log_dir, stopped, partitions,
                  this_partition, build_duration, circuit_timeout, circuit_generator,
+                 log_chunk_size = 10000,
                  prometheus_port=None, prometheus_interface=None):
         """
         state: the txtorcon state object
@@ -63,13 +64,14 @@ class ProbeAll2HopCircuits(object):
         self.circuits = circuit_generator
         self.prometheus_port = prometheus_port
         self.prometheus_interface = prometheus_interface
+        self.log_chunk_size = log_chunk_size
 
         self.lazy_tail = defer.succeed(None)
         self.tasks = []
 
 
         # XXX adjust me
-        self.result_sink = ResultSink(log_dir, chunk_size=1000)
+        self.result_sink = ResultSink(log_dir, chunk_size=log_chunk_size)
 
     def now(self):
         return 1000 * time.time()
