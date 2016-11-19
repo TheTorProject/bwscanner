@@ -69,11 +69,13 @@ def get_router_list_from_file(tor_state, relay_list_file):
 @click.option('--this-partition', default=None, type=int, help="which partition to scan")
 @click.option('--build-duration', default=0.2, type=float, help="circuit build duration")
 @click.option('--circuit-timeout', default=10.0, type=float, help="circuit build timeout")
-@click.option('--log-chunk-size', default=10000, type=float, help="circuit events per log file")
+@click.option('--log-chunk-size', default=1000, type=int, help="circuit events per log file")
+@click.option('--max-concurrency', default=100, type=int, help="max concurrency")
 @click.option('--prometheus-port', default=None, type=int, help="prometheus port to listen on")
 @click.option('--prometheus-interface', default=None, type=str, help="prometheus interface to listen on")
 def main(tor_control, tor_data, log_dir, relay_list, consensus,
-         secret, partitions, this_partition, build_duration, circuit_timeout, log_chunk_size, prometheus_port, prometheus_interface):
+         secret, partitions, this_partition, build_duration,
+         circuit_timeout, log_chunk_size, max_concurrency, prometheus_port, prometheus_interface):
 
     log.startLogging( sys.stdout )
     def start_tor():
@@ -110,7 +112,7 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
             routers = get_router_list_from_file(tor_state, relay_list)
         else:
             print "wtf"
-            os.exit(1)
+            sys.exit(1)
         return (tor_state, routers)
 
     if tor_control is None:
@@ -134,7 +136,8 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
         circuit_generator = lazy2HopCircuitGenerator(routers, this_partition, partitions, prng_seed)
         probe = ProbeAll2HopCircuits(tor_state, reactor, log_dir, reactor.stop,
                                      partitions, this_partition, build_duration, circuit_timeout,
-                                     circuit_generator, log_chunk_size, prometheus_port, prometheus_interface)
+                                     circuit_generator, log_chunk_size, max_concurrency,
+                                     prometheus_port, prometheus_interface)
         print "starting scan"
         probe.start()
         def signal_handler(signal, frame):

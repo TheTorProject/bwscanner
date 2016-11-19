@@ -40,7 +40,7 @@ class ProbeAll2HopCircuits(object):
 
     def __init__(self, state, clock, log_dir, stopped, partitions,
                  this_partition, build_duration, circuit_timeout, circuit_generator,
-                 log_chunk_size = 10000,
+                 log_chunk_size, max_concurrency,
                  prometheus_port=None, prometheus_interface=None):
         """
         state: the txtorcon state object
@@ -66,8 +66,9 @@ class ProbeAll2HopCircuits(object):
         self.prometheus_interface = prometheus_interface
         self.log_chunk_size = log_chunk_size
 
+        self.semaphore = defer.DeferredSemaphore(max_concurrency)
         self.lazy_tail = defer.succeed(None)
-        self.tasks = []
+        self.tasks = {}
 
 
         # XXX adjust me
@@ -111,12 +112,17 @@ class ProbeAll2HopCircuits(object):
                                    "status": "failure"})
             return None
 
+        def clean_up(opaque):
+            self.tasks.pop(serialized_route)
+
         time_start = self.now()
-        d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
+        d = self.semaphore.run(build_timeout_circuit, self.state, self.clock, route, self.circuit_life_duration)
+        self.tasks[serialized_route] = d
+        print "tasks len %s" % len(self.tasks)
         d.addCallback(circuit_build_success)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
-        self.tasks.append(d)
+        d.addBoth(clean_up)
 
     def start_prometheus_exportor(self):
         self.count_success = Counter('circuit_build_success_counter', 'successful circuit builds')
@@ -136,7 +142,7 @@ class ProbeAll2HopCircuits(object):
         def pop():
             try:
                 route = self.circuits.next()
-                print self.serialize_route(route)
+                #print self.serialize_route(route)
                 self.build_circuit(route)
             except StopIteration:
                 self.stop()
@@ -149,7 +155,7 @@ class ProbeAll2HopCircuits(object):
             self.call_id.cancel()
         except AlreadyCalled:
             pass
-        dl = defer.DeferredList(self.tasks)
+        dl = defer.DeferredList(self.tasks.values())
         dl.addCallback(lambda ign: self.result_sink.end_flush())
         dl.addCallback(lambda ign: self.stopped())
         return dl

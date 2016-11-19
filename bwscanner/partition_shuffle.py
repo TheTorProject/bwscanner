@@ -20,8 +20,6 @@ class yolo_prng():
     def compute_current(self):
         this_hmac_generation = self.stream_index / self.hash_output_length
         if this_hmac_generation > self.cached_hmac_generation:
-#            self.current = hashlib.pbkdf2_hmac(self.hash_algorithm,
-#                                               self.seed, str(this_hmac_generation), iterations=1)
             b = blake2b(data=self.seed, key=str(this_hmac_generation), digest_size=self.hash_output_length)
             self.current = b.digest()
             self.cached_hmac_generation = this_hmac_generation
