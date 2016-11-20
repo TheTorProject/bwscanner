@@ -40,7 +40,6 @@ class ResultSink(object):
                 wf.close()
 
         # buffer is full, write to disk
-        print "len buffer %s" % len(self.buffer)
         while len(self.buffer) >= int(self.chunk_size):
             chunk = self.buffer[:self.chunk_size]
             self.buffer = self.buffer[self.chunk_size:]

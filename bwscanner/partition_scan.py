@@ -90,8 +90,9 @@ class ProbeAll2HopCircuits(object):
         """
         serialized_route = self.serialize_route(route)
 
-        def circuit_build_success(result):
+        def circuit_build_success(circuit):
             self.count_success.inc()
+            return circuit.close()
 
         def circuit_build_timeout(f):
             f.trap(CircuitBuildTimedOutError)
@@ -118,7 +119,6 @@ class ProbeAll2HopCircuits(object):
         time_start = self.now()
         d = self.semaphore.run(build_timeout_circuit, self.state, self.clock, route, self.circuit_life_duration)
         self.tasks[serialized_route] = d
-        print "tasks len %s" % len(self.tasks)
         d.addCallback(circuit_build_success)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
