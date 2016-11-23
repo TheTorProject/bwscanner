@@ -11,7 +11,7 @@ import sys
 import hashlib
 import signal
 
-from twisted.python import log
+from twisted.logger import Logger, globalLogPublisher, textFileLogObserver
 from twisted.internet import reactor
 from twisted.internet.endpoints import clientFromString
 
@@ -21,6 +21,8 @@ from stem.descriptor import parse_file
 
 from bwscanner.partition_scan import ProbeAll2HopCircuits
 from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
+
+log = Logger()
 
 
 def get_router_list_from_consensus(tor_state, consensus):
@@ -63,6 +65,7 @@ def get_router_list_from_file(tor_state, relay_list_file):
 @click.option('--tor-control', default=None, type=str, help="tor control port as twisted endpoint descriptor string")
 @click.option('--tor-data', default=None, type=str, help="launch tor data directory")
 @click.option('--log-dir', default="./logs", type=str, help="log directory")
+@click.option('--status-log', default=None, type=str, help="file path of status log")
 @click.option('--relay-list', default=None, type=str, help="file containing list of tor relay fingerprints, one per line")
 @click.option('--consensus', default=None, type=str, help="file containing tor consensus document, network-status-consensus-3 1.0")
 @click.option('--secret', default=None, type=str, help="secret")
@@ -74,11 +77,14 @@ def get_router_list_from_file(tor_state, relay_list_file):
 @click.option('--max-concurrency', default=100, type=int, help="max concurrency")
 @click.option('--prometheus-port', default=None, type=int, help="prometheus port to listen on")
 @click.option('--prometheus-interface', default=None, type=str, help="prometheus interface to listen on")
-def main(tor_control, tor_data, log_dir, relay_list, consensus,
+def main(tor_control, tor_data, log_dir, status_log, relay_list, consensus,
          secret, partitions, this_partition, build_duration,
          circuit_timeout, log_chunk_size, max_concurrency, prometheus_port, prometheus_interface):
 
-    log.startLogging( sys.stdout )
+    assert status_log is not None
+    status_log_fh = open(status_log, 'w')    
+    globalLogPublisher.addObserver(textFileLogObserver(status_log_fh))
+
     def start_tor():
         config = txtorcon.TorConfig()
         config.DataDirectory = tor_data

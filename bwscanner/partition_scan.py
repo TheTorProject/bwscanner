@@ -8,7 +8,7 @@ import time
 from twisted.internet.error import AlreadyCalled
 from twisted.internet import defer
 from twisted.internet import reactor
-
+from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 
@@ -142,7 +142,7 @@ class ProbeAll2HopCircuits(object):
         def pop():
             try:
                 route = self.circuits.next()
-                #print self.serialize_route(route)
+                log.msg(self.serialize_route(route))
                 self.build_circuit(route)
             except StopIteration:
                 self.stop()
