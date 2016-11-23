@@ -22,6 +22,7 @@ from stem.descriptor import parse_file
 from bwscanner.partition_scan import ProbeAll2HopCircuits
 from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
 
+
 def get_router_list_from_consensus(tor_state, consensus):
     """
     arguments
