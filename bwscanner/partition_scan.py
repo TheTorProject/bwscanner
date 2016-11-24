@@ -69,7 +69,7 @@ class ProbeAll2HopCircuits(object):
         self.semaphore = defer.DeferredSemaphore(max_concurrency)
         self.lazy_tail = defer.succeed(None)
         self.tasks = {}
-
+        self.call_id = None
 
         # XXX adjust me
         self.result_sink = ResultSink(log_dir, chunk_size=log_chunk_size)
@@ -152,7 +152,8 @@ class ProbeAll2HopCircuits(object):
 
     def stop(self):
         try:
-            self.call_id.cancel()
+            if self.call_id is not None:
+                self.call_id.cancel()
         except AlreadyCalled:
             pass
         dl = defer.DeferredList(self.tasks.values())
