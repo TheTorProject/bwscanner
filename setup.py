@@ -24,11 +24,6 @@ setup(name='bwscanner', # TODO: pick a better name
       packages=find_packages(),
       # data_files = [('path', ['filename'])]
       data_files=[],
-      extras_require={
-          "partition_detection": [
-              "pyblake2",
-          ],
-      },
       entry_points={
         "console_scripts": [
             'bwscan = bwscanner.scanner:cli',
