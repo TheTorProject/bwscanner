@@ -4,19 +4,18 @@ Relays which cannot connect to each other are bad for Tor network health
 and it may indicate that a partitioning attack is being performed.
 """
 import time
-import hashlib
 
 from twisted.internet.error import AlreadyCalled
 from twisted.internet import defer
 from twisted.internet import reactor
-
+from twisted.python import log
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 
 from txtorcon.circuit import build_timeout_circuit, CircuitBuildTimedOutError
 
 from bwscanner.writer import ResultSink
-from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
+
 
 try:
     from prometheus_client.twisted import MetricsResource
@@ -39,8 +38,9 @@ except ImportError:
 
 class ProbeAll2HopCircuits(object):
 
-    def __init__(self, state, clock, log_dir, stopped, relays, shared_secret, partitions,
-                 this_partition, build_duration, circuit_timeout,
+    def __init__(self, state, clock, log_dir, stopped, partitions,
+                 this_partition, build_duration, circuit_timeout, circuit_generator,
+                 log_chunk_size, max_concurrency,
                  prometheus_port=None, prometheus_interface=None):
         """
         state: the txtorcon state object
@@ -57,28 +57,22 @@ class ProbeAll2HopCircuits(object):
         self.clock = clock
         self.log_dir = log_dir
         self.stopped = stopped
-        self.relays = relays
-        self.shared_secret = shared_secret
         self.partitions = partitions
         self.this_partition = this_partition
         self.circuit_life_duration = circuit_timeout
         self.circuit_build_duration = build_duration
+        self.circuits = circuit_generator
         self.prometheus_port = prometheus_port
         self.prometheus_interface = prometheus_interface
+        self.log_chunk_size = log_chunk_size
 
+        self.semaphore = defer.DeferredSemaphore(max_concurrency)
         self.lazy_tail = defer.succeed(None)
-        self.tasks = []
-
-        consensus = ""
-        for relay in [str(relay.id_hex) for relay in relays]:
-            consensus += relay + ","
-        consensus_hash = hashlib.sha256(consensus).digest()
-        shared_secret_hash = hashlib.sha256(shared_secret).digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
-        self.circuits = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
+        self.tasks = {}
+        self.call_id = None
 
         # XXX adjust me
-        self.result_sink = ResultSink(log_dir, chunk_size=1000)
+        self.result_sink = ResultSink(log_dir, chunk_size=log_chunk_size)
 
     def now(self):
         return 1000 * time.time()
@@ -96,8 +90,9 @@ class ProbeAll2HopCircuits(object):
         """
         serialized_route = self.serialize_route(route)
 
-        def circuit_build_success(result):
+        def circuit_build_success(circuit):
             self.count_success.inc()
+            return circuit.close()
 
         def circuit_build_timeout(f):
             f.trap(CircuitBuildTimedOutError)
@@ -118,12 +113,16 @@ class ProbeAll2HopCircuits(object):
                                    "status": "failure"})
             return None
 
+        def clean_up(opaque):
+            self.tasks.pop(serialized_route)
+
         time_start = self.now()
-        d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
+        d = self.semaphore.run(build_timeout_circuit, self.state, self.clock, route, self.circuit_life_duration)
+        self.tasks[serialized_route] = d
         d.addCallback(circuit_build_success)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
-        self.tasks.append(d)
+        d.addBoth(clean_up)
 
     def start_prometheus_exportor(self):
         self.count_success = Counter('circuit_build_success_counter', 'successful circuit builds')
@@ -143,7 +142,7 @@ class ProbeAll2HopCircuits(object):
         def pop():
             try:
                 route = self.circuits.next()
-                print self.serialize_route(route)
+                log.msg(self.serialize_route(route))
                 self.build_circuit(route)
             except StopIteration:
                 self.stop()
@@ -153,10 +152,11 @@ class ProbeAll2HopCircuits(object):
 
     def stop(self):
         try:
-            self.call_id.cancel()
+            if self.call_id is not None:
+                self.call_id.cancel()
         except AlreadyCalled:
             pass
-        dl = defer.DeferredList(self.tasks)
+        dl = defer.DeferredList(self.tasks.values())
         dl.addCallback(lambda ign: self.result_sink.end_flush())
         dl.addCallback(lambda ign: self.stopped())
         return dl

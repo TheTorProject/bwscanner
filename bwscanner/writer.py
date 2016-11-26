@@ -20,7 +20,6 @@ class ResultSink(object):
         """
         self.out_dir = out_dir
         self.chunk_size = chunk_size
-
         self.buffer = []
         self.writing = False
         self.current_task = defer.succeed(None)
@@ -41,7 +40,7 @@ class ResultSink(object):
                 wf.close()
 
         # buffer is full, write to disk
-        while len(self.buffer) >= self.chunk_size:
+        while len(self.buffer) >= int(self.chunk_size):
             chunk = self.buffer[:self.chunk_size]
             self.buffer = self.buffer[self.chunk_size:]
             log_path = os.path.join(self.out_dir,
