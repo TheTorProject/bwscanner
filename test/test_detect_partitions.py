@@ -61,26 +61,6 @@ class PermutationsGeneratorTests(unittest.TestCase):
         print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
         self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
 
-    def test_permutations(self):
-        total_relays = 40
-        routers = []
-        for n in range(total_relays):
-            routers.append("relay%d" % n)
-        this_partition = 0
-        partitions = 3
-
-        consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
-        shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
-        circuit_generator = lazy2HopCircuitGenerator(routers, this_partition,
-                                                     partitions, prng_seed)
-        circuits = map(lambda x: (str(x[0]), str(x[1])), [circuit for circuit in circuit_generator])
-        expected = [('relay17', 'relay25'), ('relay10', 'relay26'), ('relay8', 'relay3'),
-                    ('relay20', 'relay37'), ('relay7', 'relay26'), ('relay29', 'relay28'),
-                    ('relay12', 'relay38'), ('relay7', 'relay14'), ('relay2', 'relay4'),
-                    ('relay16', 'relay3')]
-        self.failUnlessEqual(circuits[:10], expected)
-
 
 class FakeTorState(object):
 
@@ -95,6 +75,7 @@ class FakeTorState(object):
         return defer.succeed(None)
 
     def build_circuit(self, routers=None, using_guards=True):
+        print "build circuit"
         cmd = "EXTENDCIRCUIT 0 "
         first = True
         for router in routers:
@@ -144,9 +125,12 @@ class ProbeTests(unittest.TestCase):
         shared_secret_hash = hashlib.sha256(secret).digest()
         prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
         circuit_generator = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
+        log_chunk_size = 1000
+        max_concurrency = 5
         probe = ProbeAll2HopCircuits(tor_state, clock, log_dir, stopped,
                                      partitions, this_partition,
-                                     build_duration, circuit_timeout, circuit_generator)
+                                     build_duration, circuit_timeout, circuit_generator,
+                                     log_chunk_size, max_concurrency)
         probe.start()
         for _ in range(len(relays)**2 - len(relays)):
             try:
