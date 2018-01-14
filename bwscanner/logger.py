@@ -10,6 +10,7 @@ def log_event_format(event):
                                       event["log_level"].name.upper(),
                                       formatEvent(event))
 
+
 # Disable Factory starting and stopping log messages
 Factory.noisy = False
 log = Logger("bwscanner")
