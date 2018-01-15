@@ -31,13 +31,15 @@ class PermutationsGeneratorTests(unittest.TestCase):
         partitions = 3
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
             partition = [circuit for circuit in
-                         lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
+                         lazy2HopCircuitGenerator(relays, partition_id,
+                                                  partitions, prng_seed)]
             all_partitions += partition
-        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2) - total_relays)
 
     def test_shuffle_generator2(self):
         total_relays = 80
@@ -45,13 +47,15 @@ class PermutationsGeneratorTests(unittest.TestCase):
         partitions = 4
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
             partition = [circuit for circuit in
-                         lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
+                         lazy2HopCircuitGenerator(relays, partition_id,
+                                                  partitions, prng_seed)]
             all_partitions += partition
-        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2) - total_relays)
 
     def test_permutations(self):
         total_relays = 40
@@ -63,14 +67,17 @@ class PermutationsGeneratorTests(unittest.TestCase):
 
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         circuit_generator = lazy2HopCircuitGenerator(routers, this_partition,
                                                      partitions, prng_seed)
-        circuits = map(lambda x: (str(x[0]), str(x[1])), [circuit for circuit in circuit_generator])
-        expected = [('relay17', 'relay25'), ('relay10', 'relay26'), ('relay8', 'relay3'),
-                    ('relay20', 'relay37'), ('relay7', 'relay26'), ('relay29', 'relay28'),
-                    ('relay12', 'relay38'), ('relay7', 'relay14'), ('relay2', 'relay4'),
-                    ('relay16', 'relay3')]
+        circuits = map(lambda x: (str(x[0]), str(x[1])), [
+                       circuit for circuit in circuit_generator])
+        expected = [('relay17', 'relay25'), ('relay10', 'relay26'),
+                    ('relay8', 'relay3'), ('relay20', 'relay37'),
+                    ('relay7', 'relay26'), ('relay29', 'relay28'),
+                    ('relay12', 'relay38'), ('relay7', 'relay14'),
+                    ('relay2', 'relay4'), ('relay16', 'relay3')]
         self.failUnlessEqual(circuits[:10], expected)
 
 
@@ -95,7 +102,7 @@ class FakeTorState(object):
             else:
                 cmd += ','
             if isinstance(router, basestring) and len(router) == 40 \
-               and hashFromHexId(router):
+                    and hashFromHexId(router):
                 cmd += router
             else:
                 cmd += router.id_hex[1:]
@@ -129,8 +136,9 @@ class ProbeTests(unittest.TestCase):
         build_duration = .2
         circuit_timeout = 10
         probe = ProbeAll2HopCircuits(tor_state, clock, log_dir, stopped,
-                                     relays, secret, partitions, this_partition,
-                                     build_duration, circuit_timeout)
+                                     relays, secret, partitions,
+                                     this_partition, build_duration,
+                                     circuit_timeout)
         probe.start()
         for _ in range(len(relays)**2 - len(relays)):
             try:

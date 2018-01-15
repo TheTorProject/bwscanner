@@ -43,34 +43,35 @@ from twisted.internet import defer
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 def __install():
     log = logging.getLogger('tpython')
     log.info('setting up twisted reactor in ipython loop')
-    
+
     from twisted.internet import _threadedselect
     _threadedselect.install()
-    
+
     from twisted.internet import reactor
     from collections import deque
     from IPython.lib import inputhook
     from IPython import InteractiveShell
-    
+
     q = deque()
-    
+
     def reactor_wake(twisted_loop_next, q=q):
         q.append(twisted_loop_next)
-    
+
     def reactor_work(*_args):
         if q:
             while len(q):
                 q.popleft()()
         return 0
-    
+
     def reactor_start(*_args):
         log.info('starting twisted reactor in ipython')
         reactor.interleave(reactor_wake)  # @UndefinedVariable
         inputhook.set_inputhook(reactor_work)
-    
+
     def reactor_stop():
         if reactor.threadpool:  # @UndefinedVariable
             log.info('stopping twisted threads')
@@ -81,6 +82,7 @@ def __install():
     ip = InteractiveShell.instance()
 
     ask_exit = ip.ask_exit
+
     def ipython_exit():
         reactor_stop()
         return ask_exit()
@@ -91,7 +93,9 @@ def __install():
 
     return reactor
 
+
 reactor = __install()
 
 from txtorcon import build_local_tor_connection
-build_local_tor_connection(reactor).addCallback(lambda tor: globals().update(tor=tor))
+build_local_tor_connection(reactor).addCallback(
+    lambda tor: globals().update(tor=tor))

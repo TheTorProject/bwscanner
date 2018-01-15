@@ -12,6 +12,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from txsocksx.errors import HostUnreachable, TTLExpired
 from txtorcon import TorConfig
 
+
 def fetch(path, url, state):
     agent = OnionRoutedAgent(reactor, path=path, state=state)
     request = agent.request("GET", url)
@@ -27,6 +28,7 @@ def fetch(path, url, state):
             return exit_ip, None
 
     request.addCallback(parse_ip)
+
     def err(failure):
         failure.trap(defer.CancelledError, ResponseNeverReceived,
                      ResponseFailed, HostUnreachable, TTLExpired)
@@ -34,12 +36,15 @@ def fetch(path, url, state):
     request.addErrback(err)
     return request
 
+
 def run_scan(state):
     circuits = ExitScan(state)
     url = 'https://check.torproject.org'
-    outfile = open("exit-addresses.%s.json" % datetime.datetime.utcnow().isoformat(), 'w+')
+    outfile = open("exit-addresses.%s.json" %
+                   datetime.datetime.utcnow().isoformat(), 'w+')
     all_tasks_done = defer.Deferred()
     tasks = []
+
     def pop(circuits):
         try:
             tasks.append(task.deferLater(
@@ -54,18 +59,23 @@ def run_scan(state):
     reactor.callLater(0, pop, circuits)
     return all_tasks_done
 
+
 def shutdown(ignore):
     reactor.stop()
+
 
 def add_attacher(state):
     state.set_attacher(SOCKSClientStreamAttacher(state), reactor)
     return state
 
+
 def setup_failed(failure):
     log.err(failure)
 
+
 def save_results(result, outfile):
     outfile.write(json.dumps(dict([r[1] for r in result if r[1] != None])))
+
 
 def main():
     log.startLogging(sys.stdout)
@@ -75,6 +85,7 @@ def main():
     tor.addErrback(log.err)
     tor.addBoth(shutdown)
     reactor.run()
+
 
 if __name__ == '__main__':
     main()

@@ -42,7 +42,7 @@ class yolo_prng():
             # interpret them as an unsigned integer:
             word = int(prng_bytes.encode('hex'), 0x10)
             # adjust for modulo bias by discarding word if larger than our set:
-            if word <= maximum or 0 == (1+maximum) % (256**prng_bytes_to_read):
+            if word <= maximum or 0 == (1 + maximum) % (256**prng_bytes_to_read):
                 return word
 
 
@@ -108,7 +108,8 @@ def shuffle_sets(relays, prng_seed):
     for hop_number in xrange(2):  # 2 == circuit length
         # we shuffle the set of relays twice, to get two independent lists
         # (to spread the coordinates over more nodes)
-        shuffled_sets[hop_number] = tuple(fisher_yates_shuffle(relays, shared_prng))
+        shuffled_sets[hop_number] = tuple(
+            fisher_yates_shuffle(relays, shared_prng))
     return shuffled_sets
 
 

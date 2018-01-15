@@ -32,7 +32,8 @@ class TestOnionRoutedTCPClientEndpoint(TorTestCase):
     def test_connect_tcp(self):
         endpoint = random.choice(self.routers)
         # Connect to a routers OR port as a general TCP connection test
-        ore = OnionRoutedTCPClientEndpoint(str(endpoint.ip), int(endpoint.or_port),
+        ore = OnionRoutedTCPClientEndpoint(str(endpoint.ip),
+                                           int(endpoint.or_port),
                                            self.tor_state, self.random_path())
         proto = yield ore.connect(MockProtocol())
         self.failUnlessIsInstance(proto, MockProtocol)

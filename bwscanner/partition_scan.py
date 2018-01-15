@@ -74,8 +74,10 @@ class ProbeAll2HopCircuits(object):
             consensus += relay + ","
         consensus_hash = hashlib.sha256(consensus).digest()
         shared_secret_hash = hashlib.sha256(shared_secret).digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
-        self.circuits = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret_hash, iterations=1)
+        self.circuits = lazy2HopCircuitGenerator(
+            relays, this_partition, partitions, prng_seed)
 
         # XXX adjust me
         self.result_sink = ResultSink(log_dir, chunk_size=1000)
@@ -119,23 +121,28 @@ class ProbeAll2HopCircuits(object):
             return None
 
         time_start = self.now()
-        d = build_timeout_circuit(self.state, self.clock, route, self.circuit_life_duration)
+        d = build_timeout_circuit(
+            self.state, self.clock, route, self.circuit_life_duration)
         d.addCallback(circuit_build_success)
         d.addErrback(circuit_build_timeout)
         d.addErrback(circuit_build_failure)
         self.tasks.append(d)
 
     def start_prometheus_exportor(self):
-        self.count_success = Counter('circuit_build_success_counter', 'successful circuit builds')
-        self.count_failure = Counter('circuit_build_failure_counter', 'failed circuit builds')
-        self.count_timeout = Counter('circuit_build_timeout_counter', 'timed out circuit builds')
+        self.count_success = Counter(
+            'circuit_build_success_counter', 'successful circuit builds')
+        self.count_failure = Counter(
+            'circuit_build_failure_counter', 'failed circuit builds')
+        self.count_timeout = Counter(
+            'circuit_build_timeout_counter', 'timed out circuit builds')
 
         if not has_prometheus_client:
             return
         root = Resource()
         root.putChild(b'metrics', MetricsResource())
         factory = Site(root)
-        reactor.listenTCP(self.prometheus_port, factory, interface=self.prometheus_interface)
+        reactor.listenTCP(self.prometheus_port, factory,
+                          interface=self.prometheus_interface)
 
     def start(self):
         self.start_prometheus_exportor()
@@ -147,7 +154,8 @@ class ProbeAll2HopCircuits(object):
             except StopIteration:
                 self.stop()
             else:
-                self.call_id = self.clock.callLater(self.circuit_build_duration, pop)
+                self.call_id = self.clock.callLater(
+                    self.circuit_build_duration, pop)
         self.clock.callLater(0, pop)
 
     def stop(self):
