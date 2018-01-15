@@ -34,14 +34,9 @@ class PermutationsGeneratorTests(unittest.TestCase):
         prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
-            print "partition %d" % partition_id
             partition = [circuit for circuit in
                          lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
-            for c in partition:
-                print c
-            print "partition size %d" % len(partition)
             all_partitions += partition
-        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
         self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
 
     def test_shuffle_generator2(self):
@@ -53,12 +48,9 @@ class PermutationsGeneratorTests(unittest.TestCase):
         prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
-            print "partition %d" % partition_id
             partition = [circuit for circuit in
                          lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
-            print "partition size %d" % len(partition)
             all_partitions += partition
-        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
         self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
 
     def test_permutations(self):
