@@ -111,6 +111,7 @@ class StreamClosedListener(StreamListenerMixin):
     immediately after a stream completes rather than wait for the
     circuit to time out.
     """
+
     def __init__(self, circ):
         self.circ = circ
 

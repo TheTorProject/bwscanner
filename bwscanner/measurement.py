@@ -45,12 +45,12 @@ class BwScan(object):
         self.circuits = None
         self.baseurl = 'https://bwauth.torproject.org/bwauth.torproject.org'
         self.bw_files = {
-            64*1024: ("64M", "913b3c5df256d62235f955fa936e7a4e2d5e0cb6"),
-            32*1024: ("32M", "a536076ef51c2cfff607fec2d362671e031d6b48"),
-            16*1024: ("16M", "e91690ed2abf05e347b61aafaa23abf2a2b3292f"),
-            8*1024: ("8M", "c690229b300945ec4ba872b80e8c443e2e1750f0"),
-            4*1024: ("4M", "94f7bc6679a4419b080debd70166c2e43e80533d"),
-            2*1024: ("2M", "9793cc92932598898d22497acdd5d732037b1a13"),
+            64 * 1024: ("64M", "913b3c5df256d62235f955fa936e7a4e2d5e0cb6"),
+            32 * 1024: ("32M", "a536076ef51c2cfff607fec2d362671e031d6b48"),
+            16 * 1024: ("16M", "e91690ed2abf05e347b61aafaa23abf2a2b3292f"),
+            8 * 1024: ("8M", "c690229b300945ec4ba872b80e8c443e2e1750f0"),
+            4 * 1024: ("4M", "94f7bc6679a4419b080debd70166c2e43e80533d"),
+            2 * 1024: ("2M", "9793cc92932598898d22497acdd5d732037b1a13"),
         }
 
         self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
@@ -68,9 +68,9 @@ class BwScan(object):
 
         XXX: Should we just use the bandwidth of the measured relay instead?
         """
-        avg_bw = sum([r.bandwidth for r in path])/len(path)
+        avg_bw = sum([r.bandwidth for r in path]) / len(path)
         for size in sorted(self.bw_files.keys()):
-            if avg_bw*5 < size:
+            if avg_bw * 5 < size:
                 return size
         return max(self.bw_files.keys())
 
@@ -136,7 +136,8 @@ class BwScan(object):
                 report['path_desc_bws'].append((yield self.get_r_desc_bw(relay)))
                 report['path_ns_bws'].append((yield self.get_r_ns_bw(relay)))
             report['path_bws'] = [r.bandwidth for r in path]
-            log.info("Download successful for router {fingerprint}.", fingerprint=path[0].id_hex)
+            log.info(
+                "Download successful for router {fingerprint}.", fingerprint=path[0].id_hex)
             defer.returnValue(report)
 
         def circ_failure(failure):
@@ -154,7 +155,8 @@ class BwScan(object):
             def cancelDeferred(deferred):
                 deferred.cancel()
 
-            delayedCall = self.clock.callLater(timeout, cancelDeferred, deferred)
+            delayedCall = self.clock.callLater(
+                timeout, cancelDeferred, deferred)
 
             def gotResult(result):
                 if delayedCall.active():
@@ -181,7 +183,8 @@ class BwScan(object):
 
         raw_descriptor = yield self.state.protocol.get_info_raw('ns/id/{}'.format(router.id_hex))
         router_ns_entry = RouterStatusEntryV3(raw_descriptor)
-        defer.returnValue((router_ns_entry.bandwidth, router_ns_entry.is_unmeasured))
+        defer.returnValue((router_ns_entry.bandwidth,
+                           router_ns_entry.is_unmeasured))
 
     @defer.inlineCallbacks
     def get_r_desc_bw(self, router):

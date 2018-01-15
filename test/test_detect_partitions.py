@@ -31,7 +31,8 @@ class PermutationsGeneratorTests(unittest.TestCase):
         partitions = 3
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
             print "partition %d" % partition_id
@@ -41,8 +42,8 @@ class PermutationsGeneratorTests(unittest.TestCase):
                 print c
             print "partition size %d" % len(partition)
             all_partitions += partition
-        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
-        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
+        print "%d == %d" % (len(all_partitions), (total_relays**2) - total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2) - total_relays)
 
     def test_shuffle_generator2(self):
         total_relays = 80
@@ -50,7 +51,8 @@ class PermutationsGeneratorTests(unittest.TestCase):
         partitions = 4
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         all_partitions = []
         for partition_id in range(partitions):
             print "partition %d" % partition_id
@@ -58,8 +60,8 @@ class PermutationsGeneratorTests(unittest.TestCase):
                          lazy2HopCircuitGenerator(relays, partition_id, partitions, prng_seed)]
             print "partition size %d" % len(partition)
             all_partitions += partition
-        print "%d == %d" % (len(all_partitions), (total_relays**2)-total_relays)
-        self.assertEqual(len(all_partitions), (total_relays**2)-total_relays)
+        print "%d == %d" % (len(all_partitions), (total_relays**2) - total_relays)
+        self.assertEqual(len(all_partitions), (total_relays**2) - total_relays)
 
     def test_permutations(self):
         total_relays = 40
@@ -71,13 +73,17 @@ class PermutationsGeneratorTests(unittest.TestCase):
 
         consensus_hash = hashlib.sha256('REPLACEME consensus hash').digest()
         shared_secret = hashlib.sha256('REPLACEME shared secret').digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac(
+            'sha256', consensus_hash, shared_secret, iterations=1)
         circuit_generator = lazy2HopCircuitGenerator(routers, this_partition,
                                                      partitions, prng_seed)
-        circuits = map(lambda x: (str(x[0]), str(x[1])), [circuit for circuit in circuit_generator])
+        circuits = map(lambda x: (str(x[0]), str(x[1])), [
+                       circuit for circuit in circuit_generator])
         expected = [('relay17', 'relay25'), ('relay10', 'relay26'), ('relay8', 'relay3'),
-                    ('relay20', 'relay37'), ('relay7', 'relay26'), ('relay29', 'relay28'),
-                    ('relay12', 'relay38'), ('relay7', 'relay14'), ('relay2', 'relay4'),
+                    ('relay20', 'relay37'), ('relay7',
+                                             'relay26'), ('relay29', 'relay28'),
+                    ('relay12', 'relay38'), ('relay7',
+                                             'relay14'), ('relay2', 'relay4'),
                     ('relay16', 'relay3')]
         self.failUnlessEqual(circuits[:10], expected)
 

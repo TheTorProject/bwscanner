@@ -47,7 +47,8 @@ class ResultSink(object):
             log_path = os.path.join(self.out_dir,
                                     "%s-scan.json" % (datetime.datetime.utcnow().isoformat()))
 
-            self.current_task.addCallback(lambda ign: threads.deferToThread(write))
+            self.current_task.addCallback(
+                lambda ign: threads.deferToThread(write))
 
         # buffer is not full, return deferred for current batch
         return self.current_task
@@ -65,7 +66,8 @@ class ResultSink(object):
                 json.dump(self.buffer, wf, sort_keys=True)
             finally:
                 wf.close()
-            log.info("Finished writing measurement values to {log_path}.", log_path=log_path)
+            log.info(
+                "Finished writing measurement values to {log_path}.", log_path=log_path)
 
         def maybe_do_work(result):
             if len(self.buffer) != 0:
