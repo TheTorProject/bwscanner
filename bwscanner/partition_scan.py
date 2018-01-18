@@ -143,7 +143,6 @@ class ProbeAll2HopCircuits(object):
         def pop():
             try:
                 route = self.circuits.next()
-                print self.serialize_route(route)
                 self.build_circuit(route)
             except StopIteration:
                 self.stop()
