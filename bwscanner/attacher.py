@@ -3,9 +3,11 @@ import itertools
 
 from twisted.internet import defer, reactor
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from txtorcon import TorState, launch_tor
+from txtorcon import TorState, launch_tor, build_local_tor_connection, TorConfig
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
+
+from bwscanner.logger import log
 
 
 FETCH_ALL_DESCRIPTOR_OPTIONS = {
@@ -162,3 +164,40 @@ def setconf_singleport_exit(tor):
                               'ExitPolicy', 'accept 127.0.0.1:{}, reject *:*'.format(port))
     return port.addCallback(add_single_port_exit).addCallback(
         lambda ign: tor.routers[tor.protocol.get_info("fingerprint")])
+
+
+def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, control_port=9051):
+    """
+    Launch or connect to a Tor instance
+
+    Configure Tor with the passed options and return a Deferred
+    """
+    # Options for spawned or running Tor to load the correct descriptors.
+    tor_options = {
+        'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
+        'CircuitBuildTimeout': circuit_build_timeout,
+        'CircuitIdleTimeout': circuit_idle_timeout,
+        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
+    }
+
+    def tor_status(tor):
+        log.info("Connected successfully to Tor.")
+        return tor
+
+    if launch_tor:
+        log.info("Spawning a new Tor instance.")
+        c = TorConfig()
+        # Update Tor config before launching a new Tor.
+        c.config.update(tor_options)
+        c.config.update(FETCH_ALL_DESCRIPTOR_OPTIONS)
+        tor = start_tor(c)
+
+    else:
+        log.info("Trying to connect to a running Tor instance.")
+        tor = build_local_tor_connection(reactor, port=control_port)
+        # Update the Tor config on a running Tor.
+        tor.addCallback(update_tor_config, tor_options)
+        tor.addCallback(update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS)
+
+    tor.addCallback(tor_status)
+    return tor

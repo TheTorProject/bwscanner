@@ -2,21 +2,21 @@ import os
 import random
 
 from twisted.internet import defer, reactor
-from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.trial import unittest
-from txtorcon.torstate import build_tor_connection
 
 from bwscanner import circuit
-from bwscanner.attacher import SOCKSClientStreamAttacher
+from bwscanner.attacher import SOCKSClientStreamAttacher, connect_to_tor
 
 
 class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def setUp(self):
-        self.tor = yield build_tor_connection(
-            TCP4ClientEndpoint(reactor, 'localhost', int(
-                os.environ.get('CHUTNEY_CONTROL_PORT'))))
+        self.tor = yield connect_to_tor(
+                launch_tor=False,
+                circuit_build_timeout=30,
+                circuit_idle_timeout=30,
+                control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')))
 
         self.attacher = SOCKSClientStreamAttacher(self.tor)
         yield self.tor.set_attacher(self.attacher, reactor)
