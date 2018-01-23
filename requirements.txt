@@ -1,7 +1,7 @@
 click==6.6
 pyOpenSSL==16.2.0
 service-identity==16.0.0
-stem>=1.4.0
-Twisted==16.2.0
+stem>=1.5.3
+Twisted==16.6.0
 txsocksx==1.15.0.2
-txtorcon==0.15.0
+txtorcon==0.18.0

@@ -62,6 +62,7 @@ class ScanInstance(object):
     def __repr__(self):
         return '<BWScan %r>' % self.data_dir
 
+
 pass_scan = click.make_pass_decorator(ScanInstance)
 
 
