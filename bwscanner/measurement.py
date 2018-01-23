@@ -125,7 +125,7 @@ class BwScan(object):
             request_duration = report['time_end'] - report['time_start']
             report['circ_bw'] = int((file_size * 1024) // request_duration)
             report['path'] = [r.id_hex for r in path]
-            log.debug("Download took {time} for {size} MB", time=request_duration,
+            log.debug("Download took {duration} for {size} MB", duration=request_duration,
                       size=int(file_size // 1024))
 
             # We need to wait for these deferreds to be ready, we can't serialize
