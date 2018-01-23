@@ -140,6 +140,7 @@ def update_tor_config(tor, config):
     """
     config_pairs = [(key, value) for key, value in config.items()]
     d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
+    d.addCallback(lambda ok: tor.protocol.get_conf("OrPort"))
     return d.addCallback(lambda result: tor)
 
 
