@@ -3,19 +3,11 @@ import itertools
 
 from twisted.internet import defer, reactor
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from txtorcon import TorState, launch_tor, build_local_tor_connection, TorConfig
+from txtorcon import TorState, launch_tor, build_tor_connection, TorConfig
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
 from bwscanner.logger import log
-
-
-FETCH_ALL_DESCRIPTOR_OPTIONS = {
-    'UseMicroDescriptors': 0,
-    'FetchUselessDescriptors': 1,
-    'FetchDirInfoEarly': 1,
-    'FetchDirInfoExtraEarly': 1,
-}
 
 
 @implementer(IStreamAttacher)
@@ -178,6 +170,10 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
         'CircuitBuildTimeout': circuit_build_timeout,
         'CircuitIdleTimeout': circuit_idle_timeout,
         'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
+        'UseMicroDescriptors': 0,
+        'FetchUselessDescriptors': 1,
+        'FetchDirInfoEarly': 1,
+        'FetchDirInfoExtraEarly': 1,
     }
 
     def tor_status(tor):
@@ -189,7 +185,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
         c = TorConfig()
         # Update Tor config before launching a new Tor.
         c.config.update(tor_options)
-        c.config.update(FETCH_ALL_DESCRIPTOR_OPTIONS)
         tor = start_tor(c)
 
     else:
@@ -197,7 +192,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
         tor = build_local_tor_connection(reactor, port=control_port)
         # Update the Tor config on a running Tor.
         tor.addCallback(update_tor_config, tor_options)
-        tor.addCallback(update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS)
 
     tor.addCallback(tor_status)
     return tor
