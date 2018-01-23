@@ -26,6 +26,7 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout):
         'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
         'CircuitBuildTimeout': circuit_build_timeout,
         'CircuitIdleTimeout': circuit_idle_timeout,
+        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
     }
 
     def tor_status(tor):
