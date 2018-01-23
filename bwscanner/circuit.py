@@ -11,7 +11,8 @@ class CircuitGenerator(object):
     def __init__(self, state):
         self.state = state
         self.relays = list(set(state.routers.values()))
-        self.exits = [relay for relay in self.relays if self.is_valid_exit(relay)]
+        self.exits = [
+            relay for relay in self.relays if self.is_valid_exit(relay)]
 
     def __iter__(self):
         return self
@@ -38,6 +39,7 @@ class ExitScan(CircuitGenerator):
     of the consensus in the exit position once. The first and
     second hops are selected randomly.
     """
+
     def __init__(self, state):
         super(ExitScan, self).__init__(state)
         random.shuffle(self.exits)
@@ -65,6 +67,7 @@ class TwoHop(CircuitGenerator):
     Select two hop circuits with the relay to be measured and a random exit
     relay of similar bandwidth.
     """
+
     def __init__(self, state, partitions=1, this_partition=1, slice_width=50):
         """
         TwoHop can be called multiple times with different partition
@@ -81,8 +84,9 @@ class TwoHop(CircuitGenerator):
             choose an exit relay of similar bandwidth for the circuit
             """
             num_relays = len(self.relays)
-            relay_subset = range(this_partition-1, num_relays, partitions)
-            log.info("Performing a measurement scan with {count} relays.", count=len(relay_subset))
+            relay_subset = range(this_partition - 1, num_relays, partitions)
+            log.info(
+                "Performing a measurement scan with {count} relays.", count=len(relay_subset))
 
             # Choose relays in a random order fromm the relays in this partition set.
             for i in random.sample(relay_subset, len(relay_subset)):
@@ -109,12 +113,12 @@ class TwoHop(CircuitGenerator):
             if (exit.bandwidth < relay.bandwidth) and (i != num_exits):
                 continue
 
-            exit_slice = self.exits[i:i+self._slice_width]
+            exit_slice = self.exits[i:i + self._slice_width]
             exits_needed = self._slice_width - len(exit_slice)
 
             # There isn't enough exits, pick some slower exits for this slice.
             if exits_needed:
-                slice_start = max(0, i-exits_needed)
+                slice_start = max(0, i - exits_needed)
                 exit_slice = self.exits[slice_start:i] + exit_slice
 
             if relay in exit_slice:

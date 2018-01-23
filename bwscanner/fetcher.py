@@ -61,7 +61,8 @@ class OnionRoutedTCPClientEndpoint(object):
         Implements L{IStreamClientEndpoint.connect} to connect via TCP, after
         SOCKS5 negotiation and Tor circuit construction is done.
         """
-        proxy_factory = SOCKS5ClientFactory(self.host, self.port, protocol_factory)
+        proxy_factory = SOCKS5ClientFactory(
+            self.host, self.port, protocol_factory)
         self.or_endpoint.addCallback(lambda end: end.connect(proxy_factory))
 
         def _create_circ(proto):
@@ -98,7 +99,8 @@ class OnionRoutedAgent(Agent):
             elif hasattr(self, '_policyForHTTPS'):
                 tls_policy = self._policyForHTTPS().creatorForNetloc(host, port)
             else:
-                raise NotImplementedError("Cannot create a TLS validation policy.")
+                raise NotImplementedError(
+                    "Cannot create a TLS validation policy.")
             endpoint = self._tlsWrapper(tls_policy, endpoint)
         return endpoint
 
@@ -142,7 +144,8 @@ class hashingReadBodyProtocol(protocol.Protocol):
             else:
                 self.deferred.errback(reason)
         else:
-            log.debug("Deferred already called before connectionLost on hashingReadBodyProtocol.")
+            log.debug(
+                "Deferred already called before connectionLost on hashingReadBodyProtocol.")
 
 
 def hashingReadBody(response):

@@ -55,6 +55,7 @@ class ScanInstance(object):
     """
     Store the configuration and state for the CLI tool.
     """
+
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.measurement_dir = os.path.join(data_dir, 'measurements')
@@ -68,7 +69,8 @@ pass_scan = click.make_pass_decorator(ScanInstance)
 
 @click.group()
 @click.option('--data-dir', type=click.Path(),
-              default=os.environ.get("BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
+              default=os.environ.get(
+                  "BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
               help='Directory where bwscan should stores its measurements and '
               'other data.')
 @click.option('-l', '--loglevel', help='The logging level the scanner will use (default: info)',
@@ -97,7 +99,8 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout, cir
         os.makedirs(ctx.obj.measurement_dir)
 
     # Create a connection to a Tor instance
-    ctx.obj.tor = connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout)
+    ctx.obj.tor = connect_to_tor(
+        launch_tor, circuit_build_timeout, circuit_idle_timeout)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
     setup_logging(log_level=loglevel, log_name=logfile)
@@ -122,7 +125,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
 
     # XXX: check that each run is producing the same input set!
     scan_time = str(int(time.time()))
-    scan_data_dir = os.path.join(scan.measurement_dir, '{}.running'.format(scan_time))
+    scan_data_dir = os.path.join(
+        scan.measurement_dir, '{}.running'.format(scan_time))
     if not os.path.isdir(scan_data_dir):
         os.makedirs(scan_data_dir)
 
@@ -174,22 +178,27 @@ def aggregate(scan, scan_name, previous):
         # Confirm that the specified scan directory exists
         scan_dir_path = os.path.join(scan.measurement_dir, scan_name)
         if not os.path.isdir(scan_dir_path):
-            log.warn("Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
+            log.warn(
+                "Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
             sys.exit(-1)
         scan_data_dirs = [scan_dir_path]
-        log.info("Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
+        log.info(
+            "Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
 
     else:
         # Aggregate the n previous scan runs
         try:
             # Use the most recent completed scan by default
-            recent_scan_names = get_recent_scans(scan.measurement_dir)[:previous]
+            recent_scan_names = get_recent_scans(
+                scan.measurement_dir)[:previous]
         except IndexError:
             log.warn("Could not find any completed scan data.")
             sys.exit(-1)
 
-        scan_data_dirs = [os.path.join(scan.measurement_dir, name) for name in recent_scan_names]
-        log.info("Aggregating data from past {count} scans.", count=len(scan_data_dirs))
+        scan_data_dirs = [os.path.join(scan.measurement_dir, name)
+                          for name in recent_scan_names]
+        log.info("Aggregating data from past {count} scans.", count=len(
+            scan_data_dirs))
 
     scan.tor.addCallback(lambda tor: write_aggregate_data(tor, scan_data_dirs))
     scan.tor.addErrback(lambda failure: log.failure("Unexpected error"))
