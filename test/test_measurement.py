@@ -2,7 +2,6 @@ from twisted.internet import defer, reactor
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from txtorcon.util import available_tcp_port
-from bwscanner.attacher import update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS
 from bwscanner.measurement import BwScan
 from test.template import TorTestCase
 from tempfile import mkdtemp
@@ -18,7 +17,6 @@ class TestBwscan(TorTestCase):
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestBwscan, self).setUp()
-        yield update_tor_config(self.tor, FETCH_ALL_DESCRIPTOR_OPTIONS)
 
         class DummyResource(Resource):
             isLeaf = True
