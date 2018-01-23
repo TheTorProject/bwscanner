@@ -185,7 +185,7 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
 
     else:
         log.info("Trying to connect to a running Tor instance.")
-        tor = build_local_tor_connection(reactor, port=control_port)
+        tor = build_tor_connection((reactor, '127.0.0.1', control_port,))
         # Update the Tor config on a running Tor.
         tor.addCallback(update_tor_config, tor_options)
 
