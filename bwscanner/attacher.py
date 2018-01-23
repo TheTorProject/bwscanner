@@ -176,10 +176,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
         'FetchDirInfoExtraEarly': 1,
     }
 
-    def tor_status(tor):
-        log.info("Connected successfully to Tor.")
-        return tor
-
     if launch_tor:
         log.info("Spawning a new Tor instance.")
         c = TorConfig()
@@ -193,5 +189,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
         # Update the Tor config on a running Tor.
         tor.addCallback(update_tor_config, tor_options)
 
-    tor.addCallback(tor_status)
+    tor.addErrback(log.debug)
+
     return tor
