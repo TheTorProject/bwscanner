@@ -26,7 +26,8 @@ class CircuitGenerator(object):
 
         TODO: Check the exit policy
         """
-        return ('exit' in relay.flags and 'badexit' not in relay.flags)
+        is_exit = ('exit' in relay.flags and 'badexit' not in relay.flags)
+        return is_exit and 'authority' not in relay.flags
 
 
 class ExitScan(CircuitGenerator):
