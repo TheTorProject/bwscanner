@@ -7,27 +7,38 @@ import random
 from bwscanner.logger import log
 
 
+def is_valid_exit(relay):
+    """
+    Check that has the correct flags and exit policy for exiting
+
+    TODO: Check the exit policy
+    """
+    is_exit = ('exit' in relay.flags and 'badexit' not in relay.flags)
+    return is_exit and 'authority' not in relay.flags
+
+
+def random_path_to_exit(exit_relay, relays):
+    """
+    Choose a random path to the specified exit relay
+    """
+    # Sample an extra relay in case one of the choices is the exit.
+    candidate_relays = random.sample(relays, 3)
+    if exit_relay in candidate_relays:
+        candidate_relays.remove(exit_relay)
+    return candidate_relays[0:2] + [exit_relay]
+
+
 class CircuitGenerator(object):
     def __init__(self, state):
         self.state = state
         self.relays = list(set(state.routers.values()))
-        self.exits = [relay for relay in self.relays if self.is_valid_exit(relay)]
+        self.exits = [relay for relay in self.relays if is_valid_exit(relay)]
 
     def __iter__(self):
         return self
 
     def next(self):
         raise NotImplementedError
-
-    @staticmethod
-    def is_valid_exit(relay):
-        """
-        Check that has the correct flags and exit policy for exiting
-
-        TODO: Check the exit policy
-        """
-        is_exit = ('exit' in relay.flags and 'badexit' not in relay.flags)
-        return is_exit and 'authority' not in relay.flags
 
 
 class ExitScan(CircuitGenerator):
@@ -48,11 +59,7 @@ class ExitScan(CircuitGenerator):
             to use the exit relay more than once.
             """
             for exit_relay in self.exits:
-                # Sample an extra relay in case one of the choices is the exit.
-                candidate_relays = random.sample(self.relays, 3)
-                if exit_relay in candidate_relays:
-                    candidate_relays.remove(exit_relay)
-                yield candidate_relays[0:2] + [exit_relay]
+                yield random_path_to_exit(exit_relay, self.relays)
 
         self._circgen = circuit_generator()
 

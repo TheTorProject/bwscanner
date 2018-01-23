@@ -6,14 +6,11 @@ from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.trial import unittest
 from txtorcon.torstate import build_tor_connection
 
+from bwscanner import circuit
 from bwscanner.attacher import SOCKSClientStreamAttacher
 
 
 class TorTestCase(unittest.TestCase):
-    """
-    XXX: Use code from circuit.py for the path selection rather than
-         repeating path selection here.
-    """
 
     @defer.inlineCallbacks
     def setUp(self):
@@ -30,14 +27,11 @@ class TorTestCase(unittest.TestCase):
 
     @property
     def exits(self):
-        return [r for r in self.routers if 'exit' in r.flags]
+        return [r for r in self.routers if circuit.is_valid_exit(r)]
 
     def random_path(self):
         exit_relay = random.choice(self.exits)
-        selected_relays = random.sample(self.routers, 3)
-        if exit_relay in selected_relays:
-            selected_relays.remove(exit_relay)
-        return selected_relays[0:2] + [exit_relay]
+        return circuit.random_path_to_exit(exit_relay, self.routers)
 
     @defer.inlineCallbacks
     def tearDown(self):
