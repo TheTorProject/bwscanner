@@ -12,18 +12,18 @@ class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def setUp(self):
-        self.tor = yield connect_to_tor(
+        self.tor_state = yield connect_to_tor(
                 launch_tor=False,
                 circuit_build_timeout=30,
                 circuit_idle_timeout=30,
                 control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')))
 
-        self.attacher = SOCKSClientStreamAttacher(self.tor)
-        yield self.tor.set_attacher(self.attacher, reactor)
+        self.attacher = SOCKSClientStreamAttacher(self.tor_state)
+        yield self.tor_state.set_attacher(self.attacher, reactor)
 
     @property
     def routers(self):
-        return list(set(self.tor.routers.values()))
+        return list(set(self.tor_state.routers.values()))
 
     @property
     def exits(self):
@@ -35,7 +35,7 @@ class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield self.tor.set_attacher(None, reactor)
-        yield self.tor.protocol.quit()
+        yield self.tor_state.set_attacher(None, reactor)
+        yield self.tor_state.protocol.quit()
         # seems to leave dirty reactor otherwise?
-        yield self.tor.protocol.transport.loseConnection()
+        yield self.tor_state.protocol.transport.loseConnection()

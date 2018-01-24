@@ -31,8 +31,8 @@ class TestCircuitEventListener(TorTestCase):
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestCircuitEventListener, self).setUp()
-        self.circuit_event_listener = CircuitEventListener(self.tor)
-        self.tor.add_circuit_listener(self.circuit_event_listener)
+        self.circuit_event_listener = CircuitEventListener(self.tor_state)
+        self.tor_state.add_circuit_listener(self.circuit_event_listener)
 
     @defer.inlineCallbacks
     def test_circuit_lifecycle(self):
@@ -44,7 +44,7 @@ class TestCircuitEventListener(TorTestCase):
         # XXX argh, we haven't gotten all the events from Tor yet...
         # hax to block until we've made Tor do something...
         yield circ.close(ifUnused=False)
-        yield self.tor.protocol.get_info('version')
+        yield self.tor_state.protocol.get_info('version')
         expected_states = ['circuit_new', 'circuit_launched', 'circuit_extend',
                            'circuit_extend', 'circuit_extend', 'circuit_built',
                            'circuit_closed']
@@ -59,7 +59,7 @@ class TestStreamBandwidthListener(TorTestCase):
     def setUp(self):
         yield super(TestStreamBandwidthListener, self).setUp()
         self.fetch_size = 8*2**20  # 8MB
-        self.stream_bandwidth_listener = yield StreamBandwidthListener(self.tor)
+        self.stream_bandwidth_listener = yield StreamBandwidthListener(self.tor_state)
 
         class DummyResource(Resource):
             isLeaf = True
@@ -132,12 +132,12 @@ class TestStreamBandwidthListener(TorTestCase):
     def do_fetch(self):
         time_start = time.time()
         path = self.random_path()
-        agent = OnionRoutedAgent(reactor, path=path, state=self.tor)
+        agent = OnionRoutedAgent(reactor, path=path, state=self.tor_state)
         url = "http://127.0.0.1:{}".format(self.port)
         request = yield agent.request("GET", url)
         body = yield readBody(request)
         assert len(body) == self.fetch_size
-        circ = [c for c in self.tor.circuits.values() if c.path == path][0]
+        circ = [c for c in self.tor_state.circuits.values() if c.path == path][0]
         assert isinstance(circ, Circuit)
 
         # XXX: Wait for circuit to close, then I think we can be sure that

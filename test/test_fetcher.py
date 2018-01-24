@@ -32,15 +32,15 @@ class TestOnionRoutedTCPClientEndpoint(TorTestCase):
     def test_connect_tcp(self):
         endpoint = random.choice(self.routers)
         # Connect to a routers OR port as a general TCP connection test
-        ore = OnionRoutedTCPClientEndpoint(endpoint.ip, int(endpoint.or_port),
-                                           self.tor, self.random_path())
+        ore = OnionRoutedTCPClientEndpoint(str(endpoint.ip), int(endpoint.or_port),
+                                           self.tor_state, self.random_path())
         proto = yield ore.connect(MockProtocol())
         self.failUnlessIsInstance(proto, MockProtocol)
 
     @defer.inlineCallbacks
     def test_connect_tcp_fail(self):
         ore = OnionRoutedTCPClientEndpoint('127.0.0.1', 3,
-                                           self.tor, self.random_path())
+                                           self.tor_state, self.random_path())
         with self.assertRaises(ConnectionRefused):
             yield ore.connect(MockProtocol())
 
@@ -63,7 +63,7 @@ class TestOnionRoutedAgent(TorTestCase):
     @defer.inlineCallbacks
     def test_do_request(self):
         agent = OnionRoutedAgent(reactor, path=self.random_path(),
-                                 state=self.tor)
+                                 state=self.tor_state)
         url = "http://127.0.0.1:{}".format(self.port)
         request = yield agent.request("GET", url)
         body = yield readBody(request)
@@ -72,7 +72,7 @@ class TestOnionRoutedAgent(TorTestCase):
     @defer.inlineCallbacks
     def test_do_failing_request(self):
         agent = OnionRoutedAgent(reactor, path=self.random_path(),
-                                 state=self.tor)
+                                 state=self.tor_state)
 
         url = "http://127.0.0.1:{}".format(3)
         with self.assertRaises(ConnectionRefused):
