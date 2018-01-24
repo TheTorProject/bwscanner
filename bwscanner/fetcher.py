@@ -66,7 +66,7 @@ class OnionRoutedTCPClientEndpoint(object):
 
         def _create_circ(proto):
             hp = proto.transport.getHost()
-            d = self.state.attacher.create_circuit(hp.host, hp.port, self.path)
+            d = self.state._attacher.create_circuit(hp.host, hp.port, self.path)
             d.addErrback(proxy_factory.deferred.errback)
             return proxy_factory.deferred
 

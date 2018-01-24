@@ -1,9 +1,9 @@
 import sys
-import itertools
 
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, endpoints
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from txtorcon import TorState, launch_tor, build_tor_connection, TorConfig
+import txtorcon
+from txtorcon import TorState, launch_tor
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
@@ -134,16 +134,6 @@ def start_tor(config):
     return get_random_tor_ports().addCallback(launch_and_get_state)
 
 
-def update_tor_config(tor, config):
-    """
-    Update the Tor config from a dict of config key: value pairs.
-    """
-    config_pairs = [(key, value) for key, value in config.items()]
-    d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
-    d.addCallback(lambda ok: ok)
-    return d.addCallback(lambda result: tor)
-
-
 def setconf_singleport_exit(tor):
     port = available_tcp_port(reactor)
 
@@ -159,6 +149,7 @@ def setconf_singleport_exit(tor):
         lambda ign: tor.routers[tor.protocol.get_info("fingerprint")])
 
 
+@defer.inlineCallbacks
 def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, control_port=9051):
     """
     Launch or connect to a Tor instance
@@ -179,17 +170,23 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
 
     if launch_tor:
         log.info("Spawning a new Tor instance.")
-        c = TorConfig()
-        # Update Tor config before launching a new Tor.
-        c.config.update(tor_options)
-        tor = start_tor(c)
-
+        # TODO: Pass in data_dir directory so consensus can be cached
+        tor = yield txtorcon.launch(reactor)
     else:
         log.info("Trying to connect to a running Tor instance.")
-        tor = build_tor_connection((reactor, '127.0.0.1', control_port,))
-        # Update the Tor config on a running Tor.
-        tor.addCallback(update_tor_config, tor_options)
+        tor = yield txtorcon.connect(
+            reactor,
+            endpoints.TCP4ClientEndpoint(reactor, "localhost", control_port)
+        )
 
-    tor.addErrback(log.debug)
+    # Get Tor state first to avoid a race conditions where CONF_CHANGED
+    # messages are received while Txtorcon is reading the consensus.
+    tor_state = yield tor.create_state()
 
-    return tor
+    # Update Tor config options from dictionary
+    tor_config = yield tor.get_config()
+    for key, value in tor_options.items():
+        setattr(tor_config, key, value)
+    yield tor_config.save()  # Send updated options to Tor
+
+    defer.returnValue(tor_state)
