@@ -3,17 +3,11 @@ import itertools
 
 from twisted.internet import defer, reactor
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from txtorcon import TorState, launch_tor
+from txtorcon import TorState, launch_tor, build_tor_connection, TorConfig
 from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
-
-FETCH_ALL_DESCRIPTOR_OPTIONS = {
-    'UseMicroDescriptors': 0,
-    'FetchUselessDescriptors': 1,
-    'FetchDirInfoEarly': 1,
-    'FetchDirInfoExtraEarly': 1,
-}
+from bwscanner.logger import log
 
 
 @implementer(IStreamAttacher)
@@ -146,7 +140,16 @@ def update_tor_config(tor, config):
     """
     config_pairs = [(key, value) for key, value in config.items()]
     d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
-    return d.addCallback(lambda result: tor)
+    #XXX Only follow this path if we are changing config options that
+    # require a wait for NEWCONSENSUS
+    def wait_for_newconsensus(_):
+        got_consensus = defer.Deferred()
+        def got_newconsensus(evt):
+            got_consensus.callback(tor)
+            tor.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
+        tor.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
+        return got_consensus
+    return d.addCallback(wait_for_newconsensus)
 
 
 def setconf_singleport_exit(tor):
@@ -162,3 +165,39 @@ def setconf_singleport_exit(tor):
                               'ExitPolicy', 'accept 127.0.0.1:{}, reject *:*'.format(port))
     return port.addCallback(add_single_port_exit).addCallback(
         lambda ign: tor.routers[tor.protocol.get_info("fingerprint")])
+
+
+def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, control_port=9051):
+    """
+    Launch or connect to a Tor instance
+
+    Configure Tor with the passed options and return a Deferred
+    """
+    # Options for spawned or running Tor to load the correct descriptors.
+    tor_options = {
+        'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
+        'CircuitBuildTimeout': circuit_build_timeout,
+        'CircuitIdleTimeout': circuit_idle_timeout,
+        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
+        'UseMicroDescriptors': 0,
+        'FetchUselessDescriptors': 1,
+        'FetchDirInfoEarly': 1,
+        'FetchDirInfoExtraEarly': 1,
+    }
+
+    if launch_tor:
+        log.info("Spawning a new Tor instance.")
+        c = TorConfig()
+        # Update Tor config before launching a new Tor.
+        c.config.update(tor_options)
+        tor = start_tor(c)
+
+    else:
+        log.info("Trying to connect to a running Tor instance.")
+        tor = build_tor_connection((reactor, '127.0.0.1', control_port,))
+        # Update the Tor config on a running Tor.
+        tor.addCallback(update_tor_config, tor_options)
+
+    tor.addErrback(log.debug)
+
+    return tor

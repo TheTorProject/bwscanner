@@ -12,7 +12,7 @@ from zope.interface import implementer
 from bwscanner.logger import log
 
 
-def get_orport_endpoint(tor_state):
+def get_tor_socks_endpoint(tor_state):
     proxy_endpoint = tor_state.protocol.get_conf("SocksPort")
 
     def extract_port_value(result):
@@ -54,7 +54,7 @@ class OnionRoutedTCPClientEndpoint(object):
         self.path = path
         self.state = state
 
-        self.or_endpoint = get_orport_endpoint(state)
+        self.tor_socks_endpoint = get_tor_socks_endpoint(state)
 
     def connect(self, protocol_factory):
         """
@@ -62,7 +62,7 @@ class OnionRoutedTCPClientEndpoint(object):
         SOCKS5 negotiation and Tor circuit construction is done.
         """
         proxy_factory = SOCKS5ClientFactory(self.host, self.port, protocol_factory)
-        self.or_endpoint.addCallback(lambda end: end.connect(proxy_factory))
+        self.tor_socks_endpoint.addCallback(lambda end: end.connect(proxy_factory))
 
         def _create_circ(proto):
             hp = proto.transport.getHost()
@@ -70,7 +70,7 @@ class OnionRoutedTCPClientEndpoint(object):
             d.addErrback(proxy_factory.deferred.errback)
             return proxy_factory.deferred
 
-        return self.or_endpoint.addCallback(_create_circ)
+        return self.tor_socks_endpoint.addCallback(_create_circ)
 
 
 class OnionRoutedAgent(Agent):

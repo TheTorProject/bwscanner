@@ -4,52 +4,14 @@ import time
 
 import click
 from twisted.internet import reactor
-from txtorcon import build_local_tor_connection, TorConfig
 
+from bwscanner.attacher import connect_to_tor
 from bwscanner.logger import setup_logging, log
-from bwscanner.attacher import start_tor, update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
 
 
 BWSCAN_VERSION = '0.0.1'
-
-
-def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout):
-    """
-    Launch or connect to a Tor instance
-
-    Configure Tor with the passed options and return a Deferred
-    """
-    # Options for spawned or running Tor to load the correct descriptors.
-    tor_options = {
-        'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
-        'CircuitBuildTimeout': circuit_build_timeout,
-        'CircuitIdleTimeout': circuit_idle_timeout,
-        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
-    }
-
-    def tor_status(tor):
-        log.info("Connected successfully to Tor.")
-        return tor
-
-    if launch_tor:
-        log.info("Spawning a new Tor instance.")
-        c = TorConfig()
-        # Update Tor config before launching a new Tor.
-        c.config.update(tor_options)
-        c.config.update(FETCH_ALL_DESCRIPTOR_OPTIONS)
-        tor = start_tor(c)
-
-    else:
-        log.info("Trying to connect to a running Tor instance.")
-        tor = build_local_tor_connection(reactor)
-        # Update the Tor config on a running Tor.
-        tor.addCallback(update_tor_config, tor_options)
-        tor.addCallback(update_tor_config, FETCH_ALL_DESCRIPTOR_OPTIONS)
-
-    tor.addCallback(tor_status)
-    return tor
 
 
 class ScanInstance(object):
