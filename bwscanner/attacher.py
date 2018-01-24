@@ -150,7 +150,7 @@ def setconf_singleport_exit(tor):
 
 
 @defer.inlineCallbacks
-def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, control_port=9051):
+def connect_to_tor(launch_tor, circuit_build_timeout, control_port=9051):
     """
     Launch or connect to a Tor instance
 
@@ -160,7 +160,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, circuit_idle_timeout, cont
     tor_options = {
         'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
         'CircuitBuildTimeout': circuit_build_timeout,
-        'CircuitIdleTimeout': circuit_idle_timeout,
         'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
         'UseMicroDescriptors': 0,
         'FetchUselessDescriptors': 1,

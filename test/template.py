@@ -15,7 +15,6 @@ class TorTestCase(unittest.TestCase):
         self.tor_state = yield connect_to_tor(
                 launch_tor=False,
                 circuit_build_timeout=30,
-                circuit_idle_timeout=30,
                 control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')))
 
         self.attacher = SOCKSClientStreamAttacher(self.tor_state)
