@@ -134,22 +134,30 @@ def start_tor(config):
     return get_random_tor_ports().addCallback(launch_and_get_state)
 
 
-def update_tor_config(tor, config):
+def options_need_new_consensus(tor_config, new_options):
     """
-    Update the Tor config from a dict of config key: value pairs.
+    Check if we need to wait for a new consensus after updating
+    the Tor config with the new options.
     """
-    config_pairs = [(key, value) for key, value in config.items()]
-    d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
-    #XXX Only follow this path if we are changing config options that
-    # require a wait for NEWCONSENSUS
-    def wait_for_newconsensus(_):
-        got_consensus = defer.Deferred()
-        def got_newconsensus(evt):
-            got_consensus.callback(tor)
-            tor.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
-        tor.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
-        return got_consensus
-    return d.addCallback(wait_for_newconsensus)
+    if "UseMicroDescriptors" in new_options:
+        if tor_config.UseMicroDescriptors != new_options["UseMicroDescriptors"]:
+            log.debug("Changing UseMicroDescriptors from {current} to {new}.",
+                      current=tor_config.UseMicroDescriptors,
+                      new=new_options["UseMicroDescriptors"])
+            return True
+    return False
+
+
+def wait_for_newconsensus(tor_state):
+    got_consensus = defer.Deferred()
+
+    def got_newconsensus(event):
+        log.debug("Got NEWCONSENSUS event: {event}", event=event)
+        got_consensus.callback(event)
+        tor_state.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
+
+    tor_state.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
+    return got_consensus
 
 
 def setconf_singleport_exit(tor):
@@ -205,10 +213,16 @@ def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
     # messages are received while Txtorcon is reading the consensus.
     tor_state = yield tor.create_state()
 
-    # Update Tor config options from dictionary
+    # Get current TorConfig object
     tor_config = yield tor.get_config()
+    wait_for_consensus = options_need_new_consensus(tor_config, tor_options)
+
+    # Update Tor config options from dictionary
     for key, value in tor_options.items():
         setattr(tor_config, key, value)
     yield tor_config.save()  # Send updated options to Tor
+
+    if wait_for_consensus:
+        yield wait_for_newconsensus(tor_state)
 
     defer.returnValue(tor_state)
