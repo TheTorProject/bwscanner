@@ -134,6 +134,24 @@ def start_tor(config):
     return get_random_tor_ports().addCallback(launch_and_get_state)
 
 
+def update_tor_config(tor, config):
+    """
+    Update the Tor config from a dict of config key: value pairs.
+    """
+    config_pairs = [(key, value) for key, value in config.items()]
+    d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
+    #XXX Only follow this path if we are changing config options that
+    # require a wait for NEWCONSENSUS
+    def wait_for_newconsensus(_):
+        got_consensus = defer.Deferred()
+        def got_newconsensus(evt):
+            got_consensus.callback(tor)
+            tor.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
+        tor.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
+        return got_consensus
+    return d.addCallback(wait_for_newconsensus)
+
+
 def setconf_singleport_exit(tor):
     port = available_tcp_port(reactor)
 
