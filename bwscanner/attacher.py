@@ -1,10 +1,6 @@
-import sys
-
+import txtorcon
 from twisted.internet import defer, reactor, endpoints
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-import txtorcon
-from txtorcon import TorState, launch_tor
-from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
 from bwscanner.logger import log
@@ -112,28 +108,6 @@ class StreamClosedListener(StreamListenerMixin):
         self.circ.close(ifUnused=True)
 
 
-def start_tor(config):
-    """
-    Launches tor with random TCP ports chosen for SocksPort and ControlPort,
-    and other options specified by a txtorcon.torconfig.TorConfig instance.
-
-    Returns a deferred that calls back with a txtorcon.torstate.TorState
-    instance.
-    """
-    def get_random_tor_ports():
-        d2 = available_tcp_port(reactor)
-        d2.addCallback(lambda port: config.__setattr__('SocksPort', port))
-        d2.addCallback(lambda _: available_tcp_port(reactor))
-        d2.addCallback(lambda port: config.__setattr__('ControlPort', port))
-        return d2
-
-    def launch_and_get_state(ignore):
-        d2 = launch_tor(config, reactor, stdout=sys.stdout)
-        d2.addCallback(lambda tpp: TorState(tpp.tor_protocol).post_bootstrap)
-        return d2
-    return get_random_tor_ports().addCallback(launch_and_get_state)
-
-
 def options_need_new_consensus(tor_config, new_options):
     """
     Check if we need to wait for a new consensus after updating
@@ -158,21 +132,6 @@ def wait_for_newconsensus(tor_state):
 
     tor_state.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
     return got_consensus
-
-
-def setconf_singleport_exit(tor):
-    port = available_tcp_port(reactor)
-
-    def add_single_port_exit(port):
-        tor.protocol.set_conf('PublishServerDescriptor', '0',
-                              'PortForwarding', '1',
-                              'AssumeReachable', '1',
-                              'ClientRejectInternalAddresses', '0',
-                              'OrPort', 'auto',
-                              'ExitPolicyRejectPrivate', '0',
-                              'ExitPolicy', 'accept 127.0.0.1:{}, reject *:*'.format(port))
-    return port.addCallback(add_single_port_exit).addCallback(
-        lambda ign: tor.routers[tor.protocol.get_info("fingerprint")])
 
 
 @defer.inlineCallbacks
