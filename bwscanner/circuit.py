@@ -31,7 +31,7 @@ def random_path_to_exit(exit_relay, relays):
 class CircuitGenerator(object):
     def __init__(self, state):
         self.state = state
-        self.relays = list(set(state.routers.values()))
+        self.relays = list(set(r for r in state.routers.values() if r))
         self.exits = [relay for relay in self.relays if is_valid_exit(relay)]
 
     def __iter__(self):

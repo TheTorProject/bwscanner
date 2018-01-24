@@ -58,7 +58,7 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
         os.makedirs(ctx.obj.measurement_dir)
 
     # Create a connection to a Tor instance
-    ctx.obj.tor = connect_to_tor(launch_tor, circuit_build_timeout)
+    ctx.obj.tor_state = connect_to_tor(launch_tor, circuit_build_timeout)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
     setup_logging(log_level=loglevel, log_name=logfile)
@@ -91,12 +91,14 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
         click.echo(deferred)
         os.rename(scan_data_dir, os.path.join(scan.measurement_dir, scan_time))
 
-    scan.tor.addCallback(BwScan, reactor, scan_data_dir, request_timeout=timeout,
-                         request_limit=request_limit, partitions=partitions,
-                         this_partition=current_partition)
-    scan.tor.addCallback(lambda scanner: scanner.run_scan())
-    scan.tor.addCallback(lambda _: reactor.stop())
-    scan.tor.addCallback(rename_finished_scan)
+    scan.tor_state.addCallback(BwScan, reactor, scan_data_dir,
+                               request_timeout=timeout,
+                               request_limit=request_limit,
+                               partitions=partitions,
+                               this_partition=current_partition)
+    scan.tor_state.addCallback(lambda scanner: scanner.run_scan())
+    scan.tor_state.addCallback(lambda _: reactor.stop())
+    scan.tor_state.addCallback(rename_finished_scan)
 
     reactor.run()
 
@@ -152,7 +154,7 @@ def aggregate(scan, scan_name, previous):
         scan_data_dirs = [os.path.join(scan.measurement_dir, name) for name in recent_scan_names]
         log.info("Aggregating data from past {count} scans.", count=len(scan_data_dirs))
 
-    scan.tor.addCallback(lambda tor: write_aggregate_data(tor, scan_data_dirs))
-    scan.tor.addErrback(lambda failure: log.failure("Unexpected error"))
-    scan.tor.addCallback(lambda _: reactor.stop())
+    scan.tor_state.addCallback(lambda tor_state: write_aggregate_data(tor_state, scan_data_dirs))
+    scan.tor_state.addErrback(lambda failure: log.failure("Unexpected error"))
+    scan.tor_state.addCallback(lambda _: reactor.stop())
     reactor.run()
