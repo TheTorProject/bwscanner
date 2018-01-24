@@ -150,7 +150,8 @@ def setconf_singleport_exit(tor):
 
 
 @defer.inlineCallbacks
-def connect_to_tor(launch_tor, circuit_build_timeout, control_port=9051):
+def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
+                   tor_overrides=None):
     """
     Launch or connect to a Tor instance
 
@@ -167,16 +168,20 @@ def connect_to_tor(launch_tor, circuit_build_timeout, control_port=9051):
         'FetchDirInfoExtraEarly': 1,
     }
 
+    if tor_overrides:
+        tor_options.update(tor_overrides)
+
     if launch_tor:
         log.info("Spawning a new Tor instance.")
         # TODO: Pass in data_dir directory so consensus can be cached
         tor = yield txtorcon.launch(reactor)
     else:
         log.info("Trying to connect to a running Tor instance.")
-        tor = yield txtorcon.connect(
-            reactor,
-            endpoints.TCP4ClientEndpoint(reactor, "localhost", control_port)
-        )
+        if control_port:
+            endpoint = endpoints.TCP4ClientEndpoint(reactor, "localhost", control_port)
+        else:
+            endpoint = None
+        tor = yield txtorcon.connect(reactor, endpoint)
 
     # Get Tor state first to avoid a race conditions where CONF_CHANGED
     # messages are received while Txtorcon is reading the consensus.

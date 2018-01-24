@@ -14,8 +14,16 @@ class TorTestCase(unittest.TestCase):
     def setUp(self):
         self.tor_state = yield connect_to_tor(
                 launch_tor=False,
+                control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')),
                 circuit_build_timeout=30,
-                control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')))
+                # XXX: Avoid switching to regular descriptors in tests.
+                #      There is a race condition where the tests can
+                #      start running while the new consensus is still
+                #      being fetched and loaded by Txtorcon.
+                #
+                #      We should find a solution for this race.
+                tor_overrides={'UseMicroDescriptors': 1},
+        )
 
         self.attacher = SOCKSClientStreamAttacher(self.tor_state)
         yield self.tor_state.set_attacher(self.attacher, reactor)
