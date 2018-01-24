@@ -1,19 +1,9 @@
-import sys
-import itertools
-
-from twisted.internet import defer, reactor
+import txtorcon
+from twisted.internet import defer, reactor, endpoints
 from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from txtorcon import TorState, launch_tor
-from txtorcon.util import available_tcp_port
 from zope.interface import implementer
 
-
-FETCH_ALL_DESCRIPTOR_OPTIONS = {
-    'UseMicroDescriptors': 0,
-    'FetchUselessDescriptors': 1,
-    'FetchDirInfoEarly': 1,
-    'FetchDirInfoExtraEarly': 1,
-}
+from bwscanner.logger import log
 
 
 @implementer(IStreamAttacher)
@@ -118,47 +108,80 @@ class StreamClosedListener(StreamListenerMixin):
         self.circ.close(ifUnused=True)
 
 
-def start_tor(config):
+def options_need_new_consensus(tor_config, new_options):
     """
-    Launches tor with random TCP ports chosen for SocksPort and ControlPort,
-    and other options specified by a txtorcon.torconfig.TorConfig instance.
-
-    Returns a deferred that calls back with a txtorcon.torstate.TorState
-    instance.
+    Check if we need to wait for a new consensus after updating
+    the Tor config with the new options.
     """
-    def get_random_tor_ports():
-        d2 = available_tcp_port(reactor)
-        d2.addCallback(lambda port: config.__setattr__('SocksPort', port))
-        d2.addCallback(lambda _: available_tcp_port(reactor))
-        d2.addCallback(lambda port: config.__setattr__('ControlPort', port))
-        return d2
-
-    def launch_and_get_state(ignore):
-        d2 = launch_tor(config, reactor, stdout=sys.stdout)
-        d2.addCallback(lambda tpp: TorState(tpp.tor_protocol).post_bootstrap)
-        return d2
-    return get_random_tor_ports().addCallback(launch_and_get_state)
+    if "UseMicroDescriptors" in new_options:
+        if tor_config.UseMicroDescriptors != new_options["UseMicroDescriptors"]:
+            log.debug("Changing UseMicroDescriptors from {current} to {new}.",
+                      current=tor_config.UseMicroDescriptors,
+                      new=new_options["UseMicroDescriptors"])
+            return True
+    return False
 
 
-def update_tor_config(tor, config):
+def wait_for_newconsensus(tor_state):
+    got_consensus = defer.Deferred()
+
+    def got_newconsensus(event):
+        log.debug("Got NEWCONSENSUS event: {event}", event=event)
+        got_consensus.callback(event)
+        tor_state.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
+
+    tor_state.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
+    return got_consensus
+
+
+@defer.inlineCallbacks
+def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
+                   tor_overrides=None):
     """
-    Update the Tor config from a dict of config key: value pairs.
+    Launch or connect to a Tor instance
+
+    Configure Tor with the passed options and return a Deferred
     """
-    config_pairs = [(key, value) for key, value in config.items()]
-    d = tor.protocol.set_conf(*itertools.chain.from_iterable(config_pairs))
-    return d.addCallback(lambda result: tor)
+    # Options for spawned or running Tor to load the correct descriptors.
+    tor_options = {
+        'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
+        'CircuitBuildTimeout': circuit_build_timeout,
+        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
+        'UseMicroDescriptors': 0,
+        'FetchUselessDescriptors': 1,
+        'FetchDirInfoEarly': 1,
+        'FetchDirInfoExtraEarly': 1,
+    }
 
+    if tor_overrides:
+        tor_options.update(tor_overrides)
 
-def setconf_singleport_exit(tor):
-    port = available_tcp_port(reactor)
+    if launch_tor:
+        log.info("Spawning a new Tor instance.")
+        # TODO: Pass in data_dir directory so consensus can be cached
+        tor = yield txtorcon.launch(reactor)
+    else:
+        log.info("Trying to connect to a running Tor instance.")
+        if control_port:
+            endpoint = endpoints.TCP4ClientEndpoint(reactor, "localhost", control_port)
+        else:
+            endpoint = None
+        tor = yield txtorcon.connect(reactor, endpoint)
 
-    def add_single_port_exit(port):
-        tor.protocol.set_conf('PublishServerDescriptor', '0',
-                              'PortForwarding', '1',
-                              'AssumeReachable', '1',
-                              'ClientRejectInternalAddresses', '0',
-                              'OrPort', 'auto',
-                              'ExitPolicyRejectPrivate', '0',
-                              'ExitPolicy', 'accept 127.0.0.1:{}, reject *:*'.format(port))
-    return port.addCallback(add_single_port_exit).addCallback(
-        lambda ign: tor.routers[tor.protocol.get_info("fingerprint")])
+    # Get Tor state first to avoid a race conditions where CONF_CHANGED
+    # messages are received while Txtorcon is reading the consensus.
+    tor_state = yield tor.create_state()
+
+    # Get current TorConfig object
+    tor_config = yield tor.get_config()
+    wait_for_consensus = options_need_new_consensus(tor_config, tor_options)
+
+    # Update Tor config options from dictionary
+    for key, value in tor_options.items():
+        setattr(tor_config, key, value)
+    yield tor_config.save()  # Send updated options to Tor
+
+    if wait_for_consensus:
+        yield wait_for_newconsensus(tor_state)
+
+    defer.returnValue(tor_state)

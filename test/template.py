@@ -2,28 +2,28 @@ import os
 import random
 
 from twisted.internet import defer, reactor
-from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.trial import unittest
-from txtorcon.torstate import build_tor_connection
 
 from bwscanner import circuit
-from bwscanner.attacher import SOCKSClientStreamAttacher
+from bwscanner.attacher import SOCKSClientStreamAttacher, connect_to_tor
 
 
 class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def setUp(self):
-        self.tor = yield build_tor_connection(
-            TCP4ClientEndpoint(reactor, 'localhost', int(
-                os.environ.get('CHUTNEY_CONTROL_PORT'))))
+        self.tor_state = yield connect_to_tor(
+                launch_tor=False,
+                control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')),
+                circuit_build_timeout=30,
+        )
 
-        self.attacher = SOCKSClientStreamAttacher(self.tor)
-        yield self.tor.set_attacher(self.attacher, reactor)
+        self.attacher = SOCKSClientStreamAttacher(self.tor_state)
+        yield self.tor_state.set_attacher(self.attacher, reactor)
 
     @property
     def routers(self):
-        return list(set(self.tor.routers.values()))
+        return list(set(self.tor_state.routers.values()))
 
     @property
     def exits(self):
@@ -35,7 +35,7 @@ class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield self.tor.set_attacher(None, reactor)
-        yield self.tor.protocol.quit()
+        yield self.tor_state.set_attacher(None, reactor)
+        yield self.tor_state.protocol.quit()
         # seems to leave dirty reactor otherwise?
-        yield self.tor.protocol.transport.loseConnection()
+        yield self.tor_state.protocol.transport.loseConnection()

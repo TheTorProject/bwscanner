@@ -8,7 +8,7 @@ class TestCircuitGenerators(TorTestCase):
         all_exits = set(self.exits)
         num_circuits = 0
         seen = set()
-        for circuit in ExitScan(self.tor):
+        for circuit in ExitScan(self.tor_state):
             assert len(circuit) == 3
             assert 'exit' in circuit[-1].flags
             seen.add(circuit[-1])
@@ -20,7 +20,7 @@ class TestCircuitGenerators(TorTestCase):
         all_r = set(self.routers)
         num_circuits = 0
         seen = set()
-        for circuit in TwoHop(self.tor):
+        for circuit in TwoHop(self.tor_state):
             assert len(circuit) == 2
             assert 'exit' in circuit[-1].flags
             num_circuits = num_circuits + 1

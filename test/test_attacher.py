@@ -54,7 +54,7 @@ class TestSOCKSClientStreamAttacher(TorTestCase):
     def setUp(self):
         yield super(TestSOCKSClientStreamAttacher, self).setUp()
         # do not attach circuits automatically
-        yield self.tor.set_attacher(None, reactor)
+        yield self.tor_state.set_attacher(None, reactor)
 
     @defer.inlineCallbacks
     def test_create_circuit(self):
