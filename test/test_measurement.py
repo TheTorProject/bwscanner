@@ -38,7 +38,7 @@ class TestBwscan(TorTestCase):
         # check that each run is producing the same input set!
         self.tmp = mkdtemp()
         scan = BwScan(self.tor_state, reactor, self.tmp)
-        scan.baseurl = 'http://127.0.0.1:{}'.format(self.port)
+        scan.BwFiles.add_url('http://127.0.0.1:{}'.format(self.port))
 
         def check_all_routers_measured(measurement_dir):
             """
