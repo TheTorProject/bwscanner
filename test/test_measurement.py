@@ -12,11 +12,12 @@ from shutil import rmtree
 
 
 class TestBwscan(TorTestCase):
-    skip = "broken tests"
-
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestBwscan, self).setUp()
+
+        # Remove test harness attacher as another attacher is added in BwScan()
+        self.tor_state.set_attacher(None, reactor)
 
         class DummyResource(Resource):
             isLeaf = True
