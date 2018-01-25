@@ -15,6 +15,7 @@ from twisted.web.resource import Resource
 
 from txtorcon.circuit import build_timeout_circuit, CircuitBuildTimedOutError
 
+from bwscanner.logger import log
 from bwscanner.writer import ResultSink
 from bwscanner.partition_shuffle import lazy2HopCircuitGenerator
 
@@ -69,12 +70,13 @@ class ProbeAll2HopCircuits(object):
         self.lazy_tail = defer.succeed(None)
         self.tasks = []
 
-        consensus = ""
-        for relay in [str(relay.id_hex) for relay in relays]:
-            consensus += relay + ","
-        consensus_hash = hashlib.sha256(consensus).digest()
+        shared_random = self.get_consensus_shared_random()
+        log.debug("Got shared random {}".format(shared_random))
+        # XXX do we need to hash the shared random?
+        # FIXME this breaks the probe tests because they use a FakeTorState rather than chutney
+        hashed_sr = hashlib.sha256(shared_random).digest()
         shared_secret_hash = hashlib.sha256(shared_secret).digest()
-        prng_seed = hashlib.pbkdf2_hmac('sha256', consensus_hash, shared_secret_hash, iterations=1)
+        prng_seed = hashlib.pbkdf2_hmac('sha256', hashed_sr, shared_secret_hash, iterations=1)
         self.circuits = lazy2HopCircuitGenerator(relays, this_partition, partitions, prng_seed)
 
         # XXX adjust me
@@ -159,3 +161,8 @@ class ProbeAll2HopCircuits(object):
         dl.addCallback(lambda ign: self.result_sink.end_flush())
         dl.addCallback(lambda ign: self.stopped())
         return dl
+
+    @defer.inlineCallbacks
+    def get_consensus_shared_random(self):
+        shared_random = yield self.state.protocol.get_info_raw('sr/current')
+        defer.returnValue(shared_random)
