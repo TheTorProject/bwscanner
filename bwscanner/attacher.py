@@ -135,7 +135,7 @@ def wait_for_newconsensus(tor_state):
 
 
 @defer.inlineCallbacks
-def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
+def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port=None,
                    tor_overrides=None):
     """
     Launch or connect to a Tor instance
@@ -158,8 +158,7 @@ def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
 
     if launch_tor:
         log.info("Spawning a new Tor instance.")
-        # TODO: Pass in data_dir directory so consensus can be cached
-        tor = yield txtorcon.launch(reactor)
+        tor = yield txtorcon.launch(reactor, data_directory=tor_dir)
     else:
         log.info("Trying to connect to a running Tor instance.")
         if control_port:

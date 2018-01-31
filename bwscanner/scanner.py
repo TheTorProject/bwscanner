@@ -21,6 +21,7 @@ class ScanInstance(object):
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.measurement_dir = os.path.join(data_dir, 'measurements')
+        self.tor_dir = os.path.join(data_dir, 'tor_data')
 
     def __repr__(self):
         return '<BWScan %r>' % self.data_dir
@@ -58,7 +59,8 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
         os.makedirs(ctx.obj.measurement_dir)
 
     # Create a connection to a Tor instance
-    ctx.obj.tor_state = connect_to_tor(launch_tor, circuit_build_timeout)
+    ctx.obj.tor_state = connect_to_tor(launch_tor, circuit_build_timeout,
+                                       ctx.obj.tor_dir)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
     setup_logging(log_level=loglevel, log_name=logfile)
