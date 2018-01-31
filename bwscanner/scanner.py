@@ -6,12 +6,21 @@ import click
 from twisted.internet import reactor
 
 from bwscanner.attacher import connect_to_tor
+from bwscanner.configutil import read_config
 from bwscanner.logger import setup_logging, log
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
 
 
 BWSCAN_VERSION = '0.0.1'
+APP_NAME = 'bwscanner'
+DATA_DIR = os.environ.get("BWSCANNER_DATADIR", click.get_app_dir(APP_NAME))
+CONFIG_FILE = 'config.ini'
+LOG_FILE = 'bwscanner.log'
+
+CTX = dict(
+    default_map=read_config(os.path.join(DATA_DIR, CONFIG_FILE))
+)
 
 
 class ScanInstance(object):
@@ -30,18 +39,27 @@ class ScanInstance(object):
 pass_scan = click.make_pass_decorator(ScanInstance)
 
 
-@click.group()
+# FIXME: change all options to take defaults from CTX, ie config file?
+@click.group(context_settings=CTX)
 @click.option('--data-dir', type=click.Path(),
-              default=os.environ.get("BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
+              default=os.environ.get("BWSCANNER_DATADIR",
+                                     CTX.get('data_dir',
+                                             click.get_app_dir(APP_NAME))),
               help='Directory where bwscan should stores its measurements and '
               'other data.')
-@click.option('-l', '--loglevel', help='The logging level the scanner will use (default: info)',
-              default='info', type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
-@click.option('-f', '--logfile', type=click.Path(), help='The file the log will be written to',
-              default=os.environ.get("BWSCANNER_LOGFILE", 'bwscanner.log'))
-@click.option('--launch-tor/--no-launch-tor', default=False,
+@click.option('-l', '--loglevel',
+              help='The logging level the scanner will use (default: info)',
+              default=CTX.get('loglevel', 'info'),
+              type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
+@click.option('-f', '--logfile', type=click.Path(),
+              help='The file the log will be written to',
+              default=os.environ.get("BWSCANNER_LOGFILE",
+                                     CTX.get('logfile', LOG_FILE)))
+@click.option('--launch-tor/--no-launch-tor',
+              default=CTX.get('launch_tor', False),
               help='Launch Tor or try to connect to an existing Tor instance.')
-@click.option('--circuit-build-timeout', default=20,
+@click.option('--circuit-build-timeout',
+              default=CTX.get('circuit_build_timeout', 20),
               help='Option passed when launching Tor.')
 @click.version_option(BWSCAN_VERSION)
 @click.pass_context
