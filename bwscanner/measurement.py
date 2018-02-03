@@ -20,7 +20,7 @@ class DownloadIncomplete(Exception):
 
 
 class BwScan(object):
-    def __init__(self, state, clock, measurement_dir, **kwargs):
+    def __init__(self, state, clock, measurement_dir, baseurl, **kwargs):
         """
         state: the txtorcon state object
         clock: this argument is normally the twisted global reactor object but
@@ -44,7 +44,7 @@ class BwScan(object):
 
         self.tasks = []
         self.circuits = None
-        self.baseurl = 'https://bwauth.torproject.org/bwauth.torproject.org'
+        self.baseurl = baseurl
         self.bw_files = {
             64*1024: ("64M", "913b3c5df256d62235f955fa936e7a4e2d5e0cb6"),
             32*1024: ("32M", "a536076ef51c2cfff607fec2d362671e031d6b48"),

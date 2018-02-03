@@ -37,7 +37,7 @@ class TestBwscan(TorTestCase):
     def test_scan_chutney(self):
         # check that each run is producing the same input set!
         self.tmp = mkdtemp()
-        scan = BwScan(self.tor_state, reactor, self.tmp)
+        scan = BwScan(self.tor_state, reactor, self.tmp, None)
         scan.baseurl = 'http://127.0.0.1:{}'.format(self.port)
 
         def check_all_routers_measured(measurement_dir):

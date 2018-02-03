@@ -12,6 +12,7 @@ from bwscanner.aggregate import write_aggregate_data
 
 
 BWSCAN_VERSION = '0.0.1'
+BASEURL = 'https://siv.sunet.se/bwauth/'
 
 
 class ScanInstance(object):
@@ -65,6 +66,10 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
 
 
 @cli.command(short_help="Measure the Tor relays.")
+# FIXME: when having a configuration file the default will be given by it.
+@click.option('--baseurl',
+              help='URL that provides the files to perform the measurements with',
+              default=BASEURL)
 @click.option('--partitions', '-p', default=1,
               help='Divide the set of relays into subsets. 1 by default.')
 @click.option('--current-partition', '-c', default=1,
@@ -75,7 +80,7 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
               help='Limit the number of simultaneous bandwidth measurements '
               '(default: %d).' % 10)
 @pass_scan
-def scan(scan, partitions, current_partition, timeout, request_limit):
+def scan(scan, baseurl, partitions, current_partition, timeout, request_limit):
     """
     Start a scan through each Tor relay to measure it's bandwidth.
     """
@@ -91,7 +96,7 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
         click.echo(deferred)
         os.rename(scan_data_dir, os.path.join(scan.measurement_dir, scan_time))
 
-    scan.tor_state.addCallback(BwScan, reactor, scan_data_dir,
+    scan.tor_state.addCallback(BwScan, reactor, scan_data_dir, baseurl,
                                request_timeout=timeout,
                                request_limit=request_limit,
                                partitions=partitions,
