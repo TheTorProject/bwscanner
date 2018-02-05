@@ -153,7 +153,6 @@ def connect_to_tor(launch_tor, circuit_build_timeout, control_port=None,
         'FetchDirInfoExtraEarly': 1,
         'SafeLogging': 0,
         'LogTimeGranularity': 1,
-        'DisableDebuggerAttachment': 0,
     }
 
     if tor_overrides:
