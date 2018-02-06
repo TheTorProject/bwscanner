@@ -20,7 +20,7 @@ class DownloadIncomplete(Exception):
 
 
 class BwScan(object):
-    def __init__(self, state, clock, measurement_dir, baseurl, **kwargs):
+    def __init__(self, state, clock, measurement_dir, baseurl, bwfiles, **kwargs):
         """
         state: the txtorcon state object
         clock: this argument is normally the twisted global reactor object but
@@ -45,14 +45,7 @@ class BwScan(object):
         self.tasks = []
         self.circuits = None
         self.baseurl = baseurl
-        self.bw_files = {
-            64*1024: ("64M", "913b3c5df256d62235f955fa936e7a4e2d5e0cb6"),
-            32*1024: ("32M", "a536076ef51c2cfff607fec2d362671e031d6b48"),
-            16*1024: ("16M", "e91690ed2abf05e347b61aafaa23abf2a2b3292f"),
-            8*1024: ("8M", "c690229b300945ec4ba872b80e8c443e2e1750f0"),
-            4*1024: ("4M", "94f7bc6679a4419b080debd70166c2e43e80533d"),
-            2*1024: ("2M", "9793cc92932598898d22497acdd5d732037b1a13"),
-        }
+        self.bw_files = bwfiles
 
         self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
 
@@ -76,7 +69,7 @@ class BwScan(object):
         return max(self.bw_files.keys())
 
     def choose_url(self, path):
-        return self.baseurl + '/' + self.bw_files[self.choose_file_size(path)][0]
+        return self.baseurl + self.bw_files[self.choose_file_size(path)][0]
 
     def run_scan(self):
         all_done = defer.Deferred()
