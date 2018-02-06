@@ -54,9 +54,16 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port
     if tor_overrides:
         tor_options.update(tor_overrides)
 
+    tor_config = txtorcon.TorConfig()
+
+    # Update Tor config options from dictionary
+    for key, value in tor_options.items():
+        setattr(tor_config, key, value)
+
     if launch_tor:
         log.info("Spawning a new Tor instance.")
-        tor = yield txtorcon.launch(reactor, data_directory=tor_dir)
+        tor = yield txtorcon.launch(reactor, data_directory=tor_dir,
+                                    _tor_config=tor_config)
     else:
         log.info("Trying to connect to a running Tor instance.")
         if control_port:
@@ -64,19 +71,14 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port
         else:
             endpoint = None
         tor = yield txtorcon.connect(reactor, endpoint)
+        # TODO: check whether CONF_CHANGED will happen here or not because
+        # we get the state later
+        tor.config = tor_config
+        tor.config.save()
 
-    # Get Tor state first to avoid a race conditions where CONF_CHANGED
-    # messages are received while Txtorcon is reading the consensus.
-    tor_state = yield tor.create_state()
-
-    # Get current TorConfig object
-    tor_config = yield tor.get_config()
     wait_for_consensus = options_need_new_consensus(tor_config, tor_options)
 
-    # Update Tor config options from dictionary
-    for key, value in tor_options.items():
-        setattr(tor_config, key, value)
-    yield tor_config.save()  # Send updated options to Tor
+    tor_state = yield tor.create_state()
 
     if wait_for_consensus:
         yield wait_for_newconsensus(tor_state)
