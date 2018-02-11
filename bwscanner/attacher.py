@@ -126,7 +126,7 @@ def wait_for_newconsensus(tor_state):
     got_consensus = defer.Deferred()
 
     def got_newconsensus(event):
-        log.debug("Got NEWCONSENSUS event: {event}", event=event)
+        log.debug("Got NEWCONSENSUS event.")
         got_consensus.callback(event)
         tor_state.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
 
