@@ -5,11 +5,12 @@ from stem.descriptor.networkstatus import RouterStatusEntryV3
 
 from twisted.internet import defer
 from twisted.web.client import readBody
+from txtorcon import TorConfig
 
 from bwscanner.logger import log
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.fetcher import OnionRoutedAgent, get_tor_socks_endpoint
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -55,9 +56,6 @@ class BwScan(object):
         }
 
         self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
-
-        # Add a stream attacher
-        self.state.set_attacher(SOCKSClientStreamAttacher(self.state), clock)
 
     def now(self):
         return time.time()
@@ -106,6 +104,7 @@ class BwScan(object):
         self.clock.callLater(0, scan_over_next_circuit)
         return all_done
 
+    @defer.inlineCallbacks
     def fetch(self, path):
         url = self.choose_url(path)
         assert None not in path
@@ -150,26 +149,29 @@ class BwScan(object):
                      fingerprint=path[0].id_hex, failure=report['failure'])
             return report
 
-        def timeoutDeferred(deferred, timeout):
-            def cancelDeferred(deferred):
-                deferred.cancel()
 
-            delayedCall = self.clock.callLater(timeout, cancelDeferred, deferred)
+        circ = yield self.state.build_circuit(path, False)
+        yield circ.when_built()
+        log.debug("Circuit is ready: {circ}", circ=circ)
 
-            def gotResult(result):
-                if delayedCall.active():
-                    delayedCall.cancel()
-                return result
-            deferred.addBoth(gotResult)
+        # XXX: There is a bug where txtorcon fails when using a
+        #      UNIXClientEndpoint so were using get_tor_socks_endpoint() to
+        #      select a TCP port endpoint. We should remove that code and
+        #      use the internal txtorcon method instead.
+        socks = yield get_tor_socks_endpoint(self.state)
+        agent = circ.web_agent(self.clock, socks)
 
-        agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
-        request = agent.request("GET", url)
+        # Make HTTP request over circuit
+        request = agent.request('GET', url)
         request.addCallback(readBody)
-        timeoutDeferred(request, self.request_timeout)
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
         request.addCallback(self.result_sink.send)
-        return request
+
+        # XXX: We need to add code to timeout HTTP connections.
+
+        yield request
+        yield circ.close()
 
     @defer.inlineCallbacks
     def get_r_ns_bw(self, router):
