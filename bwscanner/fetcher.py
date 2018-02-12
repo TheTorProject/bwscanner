@@ -4,7 +4,6 @@ import hashlib
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.web.client import (ResponseDone, PotentialDataLoss, PartialDownloadError)
-
 from bwscanner.logger import log
 
 
