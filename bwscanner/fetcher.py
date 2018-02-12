@@ -1,15 +1,11 @@
-import warnings
-import hashlib
-
-from twisted.internet import interfaces, reactor, defer, protocol
+from twisted.internet import interfaces, reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import (SchemeNotSupported, Agent, BrowserLikePolicyForHTTPS,
-                                ResponseDone, PotentialDataLoss, PartialDownloadError)
+from twisted.web.client import (SchemeNotSupported, Agent, BrowserLikePolicyForHTTPS)
 from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
 
-from bwscanner.logger import log
+# from bwscanner.logger import log
 
 
 def get_tor_socks_endpoint(tor_state):
@@ -101,85 +97,3 @@ class OnionRoutedAgent(Agent):
                 raise NotImplementedError("Cannot create a TLS validation policy.")
             endpoint = self._tlsWrapper(tls_policy, endpoint)
         return endpoint
-
-
-class hashingReadBodyProtocol(protocol.Protocol):
-    """
-    Protocol that collects data sent to it and hashes it.
-
-    This is a helper for L{IResponse.deliverBody}, which collects the body and
-    fires a deferred with it.
-    """
-
-    def __init__(self, status, message, deferred):
-        self.deferred = deferred
-        self.status = status
-        self.message = message
-        self.hash_state = hashlib.sha1()
-
-    def dataReceived(self, data):
-        """
-        Accumulate and hash some more bytes from the response.
-        """
-        self.hash_state.update(data)
-
-    def connectionLost(self, reason):
-        """
-        Deliver the accumulated response bytes to the waiting L{Deferred}, if
-        the response body has been completely received without error.
-
-        We can cancel the readBody Deferred after it is running. Canceling
-        the Deferred closes the connection. We want to check if the deferred
-        was already called to avoid raising an AlreadyCalled exception.
-        """
-        if not self.deferred.called:
-            if reason.check(ResponseDone):
-                self.deferred.callback(self.hash_state.hexdigest())
-            elif reason.check(PotentialDataLoss):
-                self.deferred.errback(
-                    PartialDownloadError(self.status, self.message,
-                                         self.hash_state.hexdigest()))
-            else:
-                self.deferred.errback(reason)
-        else:
-            log.debug("Deferred already called before connectionLost on hashingReadBodyProtocol.")
-
-
-def hashingReadBody(response):
-    """
-    Get the body of an L{IResponse} and return the SHA1 hash of the body.
-
-    @param response: The HTTP response for which the body will be read.
-    @type response: L{IResponse} provider
-
-    @return: A L{Deferred} which will fire with the hex encoded SHA1 hash
-        of the response. Cancelling it will close the connection to the
-        server immediately.
-    """
-    def cancel(deferred):
-        """
-        Cancel a L{readBody} call, close the connection to the HTTP server
-        immediately, if it is still open.
-
-        @param deferred: The cancelled L{defer.Deferred}.
-        """
-        abort = getAbort()
-        if abort is not None:
-            abort()
-
-    d = defer.Deferred(cancel)
-    protocol = hashingReadBodyProtocol(response.code, response.phrase, d)
-
-    def getAbort():
-        return getattr(protocol.transport, 'abortConnection', None)
-
-    response.deliverBody(protocol)
-
-    if protocol.transport is not None and getAbort() is None:
-        warnings.warn(
-            'Using readBody with a transport that does not have an '
-            'abortConnection method',
-            category=DeprecationWarning,
-            stacklevel=2)
-
-    return d
