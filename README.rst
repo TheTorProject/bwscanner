@@ -111,3 +111,9 @@ Contact
 --------
 
 #bwscanner at irc.oftc.net
+
+License
+--------
+
+BWScanner is Copyright 2016, 2018 by its authors under the terms of the
+`GPLv2 <https://www.gnu.org/licenses/>`__ license.
