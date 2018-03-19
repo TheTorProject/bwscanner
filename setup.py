@@ -32,6 +32,12 @@ setup(name='bwscanner',  # TODO: pick a better name
       url=__url__,
       license=__license__,
       packages=find_packages(),
+      extras_require={
+        'dev': ['ipython', 'pyflakes', 'pep8'],
+        'test': ['tox', 'pytest'],
+        'doc': ['sphinx', 'pylint']
+      },
+      python_requires=">=2.7",
       # data_files = [('path', ['filename'])]
       data_files=[],
       entry_points={
