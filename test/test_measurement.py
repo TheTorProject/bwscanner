@@ -25,10 +25,10 @@ class TestBwscan(TorTestCase):
             def render_GET(self, request):
                 size = request.uri.split('/')[-1]
                 if 'k' in size:
-                    size = int(size[:-1])*(2**10)
+                    size = int(size[:-1]) * (2**10)
                 elif 'M' in size:
-                    size = int(size[:-1])*(2**20)
-                return 'a'*size
+                    size = int(size[:-1]) * (2**20)
+                return 'a' * size
 
         self.port = yield available_tcp_port(reactor)
         self.test_service = yield reactor.listenTCP(
@@ -55,7 +55,8 @@ class TestBwscan(TorTestCase):
                     measurements.extend(json.load(result_file))
 
             for measurement in measurements:
-                measured_relays.update({str(router) for router in measurement['path']})
+                measured_relays.update({str(router)
+                                        for router in measurement['path']})
 
             failed_measurements = [measurement for measurement in measurements
                                    if 'failure' in measurement]

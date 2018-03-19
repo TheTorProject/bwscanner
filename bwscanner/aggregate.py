@@ -55,18 +55,22 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
     for relay_fp in measurements.keys():
         log.debug("Aggregating measurements for {relay}", relay=relay_fp)
 
-        mean_bw = int(sum(measurements[relay_fp]) // len(measurements[relay_fp]))
+        mean_bw = int(sum(measurements[relay_fp]) //
+                      len(measurements[relay_fp]))
 
         # Calculated the "filtered bandwidth"
         filtered_bws = [bw for bw in measurements[relay_fp] if bw >= mean_bw]
         if filtered_bws:
             mean_filtered_bw = int(sum(filtered_bws) // len(filtered_bws))
         if not filtered_bws or mean_filtered_bw <= 0:
-            log.debug("Could not calculate a valid filtered bandwidth, skipping relay.")
+            log.debug("Could not calculate a valid filtered bandwidth, "
+                      "skipping relay.")
             continue
 
-        routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp.lstrip("$"))
-        descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp.lstrip("$"))
+        routerstatus_info = yield tor.protocol.get_info_raw(
+                'ns/id/' + relay_fp.lstrip("$"))
+        descriptor_info = yield tor.protocol.get_info_raw(
+                'desc/id/' + relay_fp.lstrip("$"))
         relay_routerstatus = RouterStatusEntryV3(routerstatus_info)
         relay_descriptor = RelayDescriptor(descriptor_info)
 
@@ -79,15 +83,17 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
             num_measurements = len(measurements[relay_fp])
             circ_fail_rate = num_failures / (num_measurements + num_failures)
         else:
-            log.debug("Not enough measurements to calculate the circuit fail rate.")
+            log.debug(
+                "Not enough measurements to calculate the circuit fail rate.")
             circ_fail_rate = 0.0
 
         desc_bw = relay_descriptor.average_bandwidth
-        line_format = ("node_id={} nick={} strm_bw={} filt_bw={} circ_fail_rate={} "
-                       "desc_bw={} ns_bw={}\n")
+        line_format = ("node_id={} nick={} strm_bw={} filt_bw={} "
+                       "circ_fail_rate={} desc_bw={} ns_bw={}\n")
 
-        aggregate_file.write(line_format.format(relay_fp, nickname, mean_bw, mean_filtered_bw,
-                                                circ_fail_rate, desc_bw, ns_bw))
+        aggregate_file.write(line_format.format(
+                relay_fp, nickname, mean_bw, mean_filtered_bw,
+                circ_fail_rate, desc_bw, ns_bw))
 
     aggregate_file.close()
     log.info("Finished outputting the aggregated measurements to {file}.",

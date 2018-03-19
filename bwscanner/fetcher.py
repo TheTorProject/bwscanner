@@ -3,8 +3,9 @@ import hashlib
 
 from twisted.internet import interfaces, reactor, defer, protocol
 from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import (SchemeNotSupported, Agent, BrowserLikePolicyForHTTPS,
-                                ResponseDone, PotentialDataLoss, PartialDownloadError)
+from twisted.web.client import (SchemeNotSupported, Agent,
+                                BrowserLikePolicyForHTTPS, ResponseDone,
+                                PotentialDataLoss, PartialDownloadError)
 from txsocksx.client import SOCKS5ClientFactory
 from txsocksx.tls import TLSWrapClientEndpoint
 from zope.interface import implementer
@@ -16,9 +17,10 @@ def get_tor_socks_endpoint(tor_state):
     proxy_endpoint = tor_state.protocol.get_conf("SocksPort")
 
     def extract_port_value(result):
-        # Get the first SOCKS port number if any. SocksPort can be a single string or a list.
-        # Tor now also has support for unix domain SOCKS sockets so we need to be careful to just
-        # pick a SOCKS port.
+        # Get the first SOCKS port number if any. SocksPort can be a
+        # single string or a list.
+        # Tor now also has support for unix domain SOCKS sockets so
+        # we need to be careful to just pick a SOCKS port.
         if isinstance(result['SocksPort'], list):
             port = next(port for port in result['SocksPort'] if port.isdigit())
         else:
@@ -61,12 +63,15 @@ class OnionRoutedTCPClientEndpoint(object):
         Implements L{IStreamClientEndpoint.connect} to connect via TCP, after
         SOCKS5 negotiation and Tor circuit construction is done.
         """
-        proxy_factory = SOCKS5ClientFactory(self.host, self.port, protocol_factory)
-        self.tor_socks_endpoint.addCallback(lambda end: end.connect(proxy_factory))
+        proxy_factory = SOCKS5ClientFactory(
+            self.host, self.port, protocol_factory)
+        self.tor_socks_endpoint.addCallback(
+                lambda end: end.connect(proxy_factory))
 
         def _create_circ(proto):
             hp = proto.transport.getHost()
-            d = self.state._attacher.create_circuit(hp.host, hp.port, self.path)
+            d = self.state._attacher.create_circuit(
+                hp.host, hp.port, self.path)
             d.addErrback(proxy_factory.deferred.errback)
             return proxy_factory.deferred
 
@@ -96,9 +101,11 @@ class OnionRoutedAgent(Agent):
             if hasattr(self, '_wrapContextFactory'):
                 tls_policy = self._wrapContextFactory(host, port)
             elif hasattr(self, '_policyForHTTPS'):
-                tls_policy = self._policyForHTTPS().creatorForNetloc(host, port)
+                tls_policy = self._policyForHTTPS().\
+                    creatorForNetloc(host, port)
             else:
-                raise NotImplementedError("Cannot create a TLS validation policy.")
+                raise NotImplementedError(
+                    "Cannot create a TLS validation policy.")
             endpoint = self._tlsWrapper(tls_policy, endpoint)
         return endpoint
 
@@ -142,7 +149,9 @@ class hashingReadBodyProtocol(protocol.Protocol):
             else:
                 self.deferred.errback(reason)
         else:
-            log.debug("Deferred already called before connectionLost on hashingReadBodyProtocol.")
+            log.debug(
+                "Deferred already called before connectionLost on "
+                "hashingReadBodyProtocol.")
 
 
 def hashingReadBody(response):

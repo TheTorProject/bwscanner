@@ -1,6 +1,7 @@
 import txtorcon
 from twisted.internet import defer, reactor, endpoints
-from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
+from txtorcon.interface import (CircuitListenerMixin, IStreamAttacher,
+                                StreamListenerMixin)
 from zope.interface import implementer
 
 from bwscanner.logger import log
@@ -101,6 +102,7 @@ class StreamClosedListener(StreamListenerMixin):
     immediately after a stream completes rather than wait for the
     circuit to time out.
     """
+
     def __init__(self, circ):
         self.circ = circ
 
@@ -114,7 +116,8 @@ def options_need_new_consensus(tor_config, new_options):
     the Tor config with the new options.
     """
     if "UseMicroDescriptors" in new_options:
-        if tor_config.UseMicroDescriptors != new_options["UseMicroDescriptors"]:
+        if tor_config.UseMicroDescriptors != \
+                new_options["UseMicroDescriptors"]:
             log.debug("Changing UseMicroDescriptors from {current} to {new}.",
                       current=tor_config.UseMicroDescriptors,
                       new=new_options["UseMicroDescriptors"])
@@ -128,7 +131,8 @@ def wait_for_newconsensus(tor_state):
     def got_newconsensus(event):
         log.debug("Got NEWCONSENSUS event.")
         got_consensus.callback(event)
-        tor_state.protocol.remove_event_listener('NEWCONSENSUS', got_newconsensus)
+        tor_state.protocol.remove_event_listener(
+            'NEWCONSENSUS', got_newconsensus)
 
     tor_state.protocol.add_event_listener('NEWCONSENSUS', got_newconsensus)
     return got_consensus
@@ -146,7 +150,8 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port
     tor_options = {
         'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
         'CircuitBuildTimeout': circuit_build_timeout,
-        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
+        # Disable UseEntryGuards to avoid PathBias warnings.
+        'UseEntryGuards': 0,
         'UseMicroDescriptors': 0,
         'FetchUselessDescriptors': 1,
         'FetchDirInfoEarly': 1,
@@ -164,7 +169,8 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port
     else:
         log.info("Trying to connect to a running Tor instance.")
         if control_port:
-            endpoint = endpoints.TCP4ClientEndpoint(reactor, "localhost", control_port)
+            endpoint = endpoints.TCP4ClientEndpoint(
+                reactor, "localhost", control_port)
         else:
             endpoint = None
         tor = yield txtorcon.connect(reactor, endpoint)

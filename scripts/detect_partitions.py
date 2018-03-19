@@ -21,6 +21,7 @@ from txtorcon import TorState
 
 from bwscanner.partition_scan import ProbeAll2HopCircuits
 
+
 def get_router_list_from_consensus(tor_state, consensus):
     """
     arguments
@@ -39,6 +40,7 @@ def get_router_list_from_consensus(tor_state, consensus):
                 print "failed to parse consensus file"
                 sys.exit(1)
     return routers
+
 
 def get_router_list_from_file(tor_state, relay_list_file):
     """
@@ -73,7 +75,8 @@ def get_router_list_from_file(tor_state, relay_list_file):
 def main(tor_control, tor_data, log_dir, relay_list, consensus,
          secret, partitions, this_partition, build_duration, circuit_timeout, prometheus_port, prometheus_interface):
 
-    log.startLogging( sys.stdout )
+    log.startLogging(sys.stdout)
+
     def start_tor():
         config = txtorcon.TorConfig()
         config.DataDirectory = tor_data
@@ -82,18 +85,21 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
             d2 = txtorcon.util.available_tcp_port(reactor)
             d2.addCallback(lambda port: config.__setattr__('SocksPort', port))
             d2.addCallback(lambda _: txtorcon.util.available_tcp_port(reactor))
-            d2.addCallback(lambda port: config.__setattr__('ControlPort', port))
+            d2.addCallback(
+                lambda port: config.__setattr__('ControlPort', port))
             return d2
 
         def launch_and_get_protocol(ignore):
             d2 = txtorcon.launch_tor(config, reactor, stdout=sys.stdout)
-            d2.addCallback(lambda tpp: txtorcon.TorState(tpp.tor_protocol).post_bootstrap)
+            d2.addCallback(lambda tpp: txtorcon.TorState(
+                tpp.tor_protocol).post_bootstrap)
             d2.addCallback(lambda state: state.protocol)
             return d2
 
         d = get_random_tor_ports().addCallback(launch_and_get_protocol)
+
         def change_torrc(result):
-            config.UseEntryGuards=0
+            config.UseEntryGuards = 0
             d2 = config.save()
             d2.addCallback(lambda ign: result)
             return d2
@@ -110,6 +116,7 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
         d = txtorcon.build_tor_connection(endpoint, build_state=True)
 
     secret_hash = hashlib.sha256(secret).digest()
+
     def start_probe(tor_state):
         if consensus is not None:
             routers = get_router_list_from_consensus(tor_state, consensus)
@@ -122,6 +129,7 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
                                      partitions, this_partition, build_duration, circuit_timeout, prometheus_port, prometheus_interface)
         print "starting scan"
         probe.start()
+
         def signal_handler(signal, frame):
             print "signal caught, stopping probe"
             d = probe.stop()
@@ -130,6 +138,7 @@ def main(tor_control, tor_data, log_dir, relay_list, consensus,
 
     d.addCallback(start_probe)
     reactor.run()
+
 
 if __name__ == '__main__':
     main()

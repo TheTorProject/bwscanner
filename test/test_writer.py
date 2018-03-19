@@ -19,7 +19,7 @@ class TestResultSink(unittest.TestCase):
         test_data = {'test_method': 'test_send_chunk_size'}
         num_chunks = randint(121, 212)
         deferreds = []
-        for _ in xrange(chunk_size*num_chunks):
+        for _ in xrange(chunk_size * num_chunks):
             deferreds += [self.result_sink.send(test_data)]
 
         def validate(_, dirname, fnames):

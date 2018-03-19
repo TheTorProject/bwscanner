@@ -18,6 +18,7 @@ class ScanInstance(object):
     """
     Store the configuration and state for the CLI tool.
     """
+
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.measurement_dir = os.path.join(data_dir, 'measurements')
@@ -32,12 +33,17 @@ pass_scan = click.make_pass_decorator(ScanInstance)
 
 @click.group()
 @click.option('--data-dir', type=click.Path(),
-              default=os.environ.get("BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
+              default=os.environ.get(
+                  "BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
               help='Directory where bwscan should stores its measurements and '
               'other data.')
-@click.option('-l', '--loglevel', help='The logging level the scanner will use (default: info)',
-              default='info', type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
-@click.option('-f', '--logfile', type=click.Path(), help='The file the log will be written to',
+@click.option('-l', '--loglevel',
+              help='The logging level the scanner will use (default: info)',
+              default='info',
+              type=click.Choice(
+                      ['debug', 'info', 'warn', 'error', 'critical']))
+@click.option('-f', '--logfile', type=click.Path(),
+              help='The file the log will be written to',
               default=os.environ.get("BWSCANNER_LOGFILE", 'bwscanner.log'))
 @click.option('--launch-tor/--no-launch-tor', default=False,
               help='Launch Tor or try to connect to an existing Tor instance.')
@@ -49,7 +55,8 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
     """
     The bwscan tool measures Tor relays and calculates their bandwidth. These
     bandwidth measurements can then be aggregate to create the bandwidth
-    values used by the Tor bandwidth authorities when creating the Tor consensus.
+    values used by the Tor bandwidth authorities when creating the Tor
+    consensus.
     """
     # Create the data directory if it doesn't exist
     data_dir = os.path.abspath(data_dir)
@@ -72,7 +79,8 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
 @click.option('--current-partition', '-c', default=1,
               help='Scan a particular subset / partition of the relays.')
 @click.option('--timeout', default=120,
-              help='Timeout for measurement HTTP requests (default: %ds).' % 120)
+              help='Timeout for measurement HTTP requests (default: %ds).'
+              % 120)
 @click.option('--request-limit', default=10,
               help='Limit the number of simultaneous bandwidth measurements '
               '(default: %d).' % 10)
@@ -85,7 +93,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
 
     # XXX: check that each run is producing the same input set!
     scan_time = str(int(time.time()))
-    scan_data_dir = os.path.join(scan.measurement_dir, '{}.running'.format(scan_time))
+    scan_data_dir = os.path.join(
+        scan.measurement_dir, '{}.running'.format(scan_time))
     if not os.path.isdir(scan_data_dir):
         os.makedirs(scan_data_dir)
 
@@ -106,8 +115,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
 
 
 def get_recent_scans(measurement_dir):
-    return sorted([name for name in os.listdir(measurement_dir) if name.isdigit()],
-                  reverse=True)
+    return sorted([name for name in os.listdir(measurement_dir)
+                   if name.isdigit()], reverse=True)
 
 
 @cli.command(short_help="List available bandwidth measurement directories.")
@@ -132,31 +141,40 @@ def list(scan):
 @pass_scan
 def aggregate(scan, scan_name, previous):
     """
-    Command to aggregate BW measurements and create the bandwidth file for the BWAuths
+    Command to aggregate BW measurements and create the bandwidth file
+    for the BWAuths
     """
     # Aggregate the specified scan
     if scan_name:
         # Confirm that the specified scan directory exists
         scan_dir_path = os.path.join(scan.measurement_dir, scan_name)
         if not os.path.isdir(scan_dir_path):
-            log.warn("Could not find scan data directory {scan_dir}.", scan_dir=scan_dir_path)
+            log.warn(
+                "Could not find scan data directory {scan_dir}.",
+                scan_dir=scan_dir_path)
             sys.exit(-1)
         scan_data_dirs = [scan_dir_path]
-        log.info("Aggregating bandwidth measurements for scan {scan_name}.", scan_name=scan_name)
+        log.info(
+            "Aggregating bandwidth measurements for scan {scan_name}.",
+            scan_name=scan_name)
 
     else:
         # Aggregate the n previous scan runs
         try:
             # Use the most recent completed scan by default
-            recent_scan_names = get_recent_scans(scan.measurement_dir)[:previous]
+            recent_scan_names = get_recent_scans(
+                scan.measurement_dir)[:previous]
         except IndexError:
             log.warn("Could not find any completed scan data.")
             sys.exit(-1)
 
-        scan_data_dirs = [os.path.join(scan.measurement_dir, name) for name in recent_scan_names]
-        log.info("Aggregating data from past {count} scans.", count=len(scan_data_dirs))
+        scan_data_dirs = [os.path.join(scan.measurement_dir, name)
+                          for name in recent_scan_names]
+        log.info("Aggregating data from past {count} scans.", count=len(
+            scan_data_dirs))
 
-    scan.tor_state.addCallback(lambda tor_state: write_aggregate_data(tor_state, scan_data_dirs))
+    scan.tor_state.addCallback(lambda tor_state:
+                               write_aggregate_data(tor_state, scan_data_dirs))
     scan.tor_state.addErrback(lambda failure: log.failure("Unexpected error"))
     scan.tor_state.addCallback(lambda _: reactor.stop())
     reactor.run()

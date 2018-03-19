@@ -131,18 +131,18 @@ class StreamBandwidthListener(CircuitListenerMixin, StreamListenerMixin):
         for r, w, d in self.bw_samples(circuit):
             # r and w are in units of bytes/second
             # d is units of second
-            r_avg += (r**2)/d
-            w_avg += (w**2)/d
+            r_avg += (r**2) / d
+            w_avg += (w**2) / d
             n_samples += 1
             bytes_r_total += r
             bytes_w_total += w
             duration += d
 
         if n_samples > 1:
-            wf = n_samples*bytes_r_total
+            wf = n_samples * bytes_r_total
             return {'path': circuit.path,
-                    'r_bw': int(r_avg/wf),
-                    'w_bw': int(w_avg/wf),
+                    'r_bw': int(r_avg / wf),
+                    'w_bw': int(w_avg / wf),
                     'duration': duration,
                     'samples': n_samples,
                     'bytes_r': bytes_r_total,
