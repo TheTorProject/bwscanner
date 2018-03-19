@@ -15,6 +15,15 @@ This project is still under active development and is not ready for active use o
 Installation
 ------------
 
+BWScanner is not yet compatible with Python 3 due to the `txsocksx ` dependency.
+
+In Debian/Ubuntu systems, you can install Python 2 and other systems
+requirements running:
+
+.. code:: bash
+
+    sudo apt install python2.7 python2.7-dev
+
 The bandwidth scanner and its dependencies can be installed as follows:
 
 .. code:: bash
@@ -23,10 +32,19 @@ The bandwidth scanner and its dependencies can be installed as follows:
     cd bwscanner
     python setup.py install
 
+In case your system is using Python 3 by default, you need to run Python 2
+explicitely, changing last line by:
+
+.. code:: bash
+
+    python2.7 setup.py install
+
+
 Running
 -------
 
 After installation the ``bwscan`` tool should be available in your path. This tool has a number of subcommands for running scans and for aggregating the collected data for use by the bandwidth authorities.
+
 
 Collecting bandwidth measurements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
