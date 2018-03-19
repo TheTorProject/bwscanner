@@ -88,3 +88,8 @@ The bandwidth scanner needs to be able to connect to a Tor control port to inter
     cd bwscanner
     export CHUTNEY_CONTROL_PORT=8021
     tox
+
+Contact
+--------
+
+#bwscanner at irc.oftc.net
