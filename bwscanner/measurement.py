@@ -8,9 +8,8 @@ from twisted.web.client import readBody
 from txtorcon import TorConfig
 
 from bwscanner.logger import log
-from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent, get_tor_socks_endpoint
+from bwscanner.fetcher import get_tor_socks_endpoint
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
