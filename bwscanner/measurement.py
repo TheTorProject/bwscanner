@@ -7,7 +7,7 @@ from twisted.internet import defer
 
 from bwscanner.logger import log
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import get_tor_socks_endpoint, hashingReadBody, fetch
+from bwscanner.fetcher import hashingReadBody, fetch
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -193,10 +193,3 @@ class BwScan(object):
         defer.returnValue((server_descriptor.average_bandwidth,
                            server_descriptor.burst_bandwidth,
                            server_descriptor.observed_bandwidth))
-
-    @property
-    @defer.inlineCallbacks
-    def socks(self):
-        if self._socks is None:
-            self._socks = yield get_tor_socks_endpoint(self.state)
-        defer.returnValue(self._socks)

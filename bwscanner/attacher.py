@@ -6,21 +6,6 @@ from zope.interface import implementer
 from bwscanner.logger import log
 
 
-class StreamClosedListener(StreamListenerMixin):
-    """
-    Closes the contained circuit if the listened stream closes.
-
-    This StreamListener is used to instruct Tor to close circuits
-    immediately after a stream completes rather than wait for the
-    circuit to time out.
-    """
-    def __init__(self, circ):
-        self.circ = circ
-
-    def stream_closed(self, *args, **kw):
-        self.circ.close(ifUnused=True)
-
-
 def options_need_new_consensus(tor_config, new_options):
     """
     Check if we need to wait for a new consensus after updating
