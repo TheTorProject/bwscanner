@@ -7,8 +7,7 @@ from twisted.internet import defer
 
 from bwscanner.logger import log
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent
-from bwscanner.fetcher import get_tor_socks_endpoint, hashingReadBody
+from bwscanner.fetcher import get_tor_socks_endpoint, hashingReadBody, fetch
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -160,10 +159,7 @@ class BwScan(object):
                 return result
             deferred.addBoth(gotResult)
 
-        d = self.state.build_circuit(path, False)
-        d.addCallback(lambda c: c.when_built())
-        d.addCallback(lambda c: c.web_agent(self.clock, self.socks))
-        d.addCallback(lambda a: a.request("GET", url))
+        d = fetch(self.state, path, url)
         d.addCallback(hashingReadBody)
         timeoutDeferred(d, self.request_timeout)
         d.addCallbacks(get_circuit_bw)
