@@ -50,6 +50,8 @@ class FakeStream(Stream):
 
 
 class TestSOCKSClientStreamAttacher(TorTestCase):
+    skip = "deprecated"
+
     @defer.inlineCallbacks
     def setUp(self):
         yield super(TestSOCKSClientStreamAttacher, self).setUp()

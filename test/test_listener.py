@@ -37,7 +37,8 @@ class TestCircuitEventListener(TorTestCase):
     @defer.inlineCallbacks
     def test_circuit_lifecycle(self):
         path = self.random_path()
-        circ = yield self.attacher.create_circuit('127.0.0.1', 1234, path)
+        circ = yield self.tor_state.build_circuit(path)
+        yield circ.when_built()
         self.assertIsInstance(circ, Circuit)
         self.assertEqual(circ.path, path)
         circuit_lifecycle = self.circuit_event_listener.circuits[circ]
