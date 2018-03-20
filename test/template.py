@@ -32,6 +32,7 @@ class TorTestCase(unittest.TestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
+        yield self.tor_state.set_attacher(None, reactor)
         yield self.tor_state.protocol.quit()
         # seems to leave dirty reactor otherwise?
         yield self.tor_state.protocol.transport.loseConnection()
