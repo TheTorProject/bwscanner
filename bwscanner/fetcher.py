@@ -7,12 +7,14 @@ from twisted.web.client import (ResponseDone, PotentialDataLoss, PartialDownload
 
 from bwscanner.logger import log
 
+
 def fetch(tor_state, path, url):
     d = tor_state.build_circuit(path, False)
     sport = get_tor_socks_endpoint(tor_state)
     d.addCallback(lambda c: c.when_built())
     d.addCallback(lambda c: c.web_agent(reactor, sport))
     return d.addCallback(lambda a: a.request("GET", url))
+
 
 def get_tor_socks_endpoint(tor_state):
     proxy_endpoint = tor_state.protocol.get_conf("SocksPort")

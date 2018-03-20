@@ -1,7 +1,5 @@
 import txtorcon
 from twisted.internet import defer, reactor, endpoints
-from txtorcon.interface import CircuitListenerMixin, IStreamAttacher, StreamListenerMixin
-from zope.interface import implementer
 
 from bwscanner.logger import log
 
