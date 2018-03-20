@@ -4,12 +4,11 @@ from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
 
 from twisted.internet import defer
-from twisted.web.client import readBody
 
 from bwscanner.logger import log
 from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.fetcher import OnionRoutedAgent, hashingReadBody
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -112,12 +111,13 @@ class BwScan(object):
         log.info("Downloading file '{file_size}' over [{relay_fp}, {exit_fp}].",
                  file_size=url.split('/')[-1], relay_fp=path[0].id_hex, exit_fp=path[-1].id_hex)
         file_size = self.choose_file_size(path)  # File size in MB
+        file_hash = self.bw_files[file_size][1]
         time_start = self.now()
 
         @defer.inlineCallbacks
         def get_circuit_bw(result):
             time_end = self.now()
-            if len(result) != file_size * 1024:
+            if result != file_hash:
                 raise DownloadIncomplete
             report = dict()
             report['time_end'] = time_end
@@ -164,7 +164,7 @@ class BwScan(object):
 
         agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
         request = agent.request("GET", url)
-        request.addCallback(readBody)
+        request.addCallback(hashingReadBody)  # returns a readBody Deferred
         timeoutDeferred(request, self.request_timeout)
         request.addCallbacks(get_circuit_bw)
         request.addErrback(circ_failure)
