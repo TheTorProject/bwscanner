@@ -23,7 +23,8 @@ class TorTestCase(unittest.TestCase):
 
     @property
     def routers(self):
-        return list(set(self.tor_state.routers.values()))
+        # NOTE: circuit relays attributes is obtained this way
+        return list(set(r for r in self.tor_state.routers.values() if r))
 
     @property
     def exits(self):
@@ -39,3 +40,4 @@ class TorTestCase(unittest.TestCase):
         yield self.tor_state.protocol.quit()
         # seems to leave dirty reactor otherwise?
         yield self.tor_state.protocol.transport.loseConnection()
+        

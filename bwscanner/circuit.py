@@ -67,7 +67,7 @@ class ExitScan(CircuitGenerator):
         return self._circgen.next()
 
 
-class TwoHop(CircuitGenerator):
+class TwoHopDeprecated(CircuitGenerator):
     """
     Select two hop circuits with the relay to be measured and a random exit
     relay of similar bandwidth.
@@ -78,7 +78,7 @@ class TwoHop(CircuitGenerator):
         values to produce slices containing a subset of the relays. These
         partitions are not grouped by bandwidth.
         """
-        super(TwoHop, self).__init__(state)
+        super(TwoHopDeprecated, self).__init__(state)
         self._slice_width = slice_width
         self.exits.sort(key=operator.attrgetter('bandwidth'))
 
@@ -130,6 +130,60 @@ class TwoHop(CircuitGenerator):
 
         raise ValueError("Did not find a suitable exit relay to build this "
                          "circuit.")
+
+    def next(self):
+        return self._circgen.next()
+
+
+class TwoHop(CircuitGenerator):
+    """
+    Select two hop circuits with the relay to be measured and a random exit
+    relay of similar bandwidth in a similar way to Torflow.
+    """
+    def __init__(self, state, partitions=1, this_partition=1, slice_width=50):
+        """
+        TwoHop can be called multiple times with different partition
+        values to produce slices containing a subset of the relays. These
+        partitions are not grouped by bandwidth.
+        """
+        super(TwoHop, self).__init__(state)
+        self._slice_width = slice_width
+        self.exits.sort(key=operator.attrgetter('bandwidth'))
+
+        def circuit_generator():
+            """
+            Select relays from the partition in a random order.
+            """
+            num_relays = len(self.relays)
+            relay_partition = range(this_partition-1, num_relays, partitions)
+            log.info("Performing a measurement scan with {count} relays.",
+                     count=len(relay_partition))
+            # Choose relays in a random order from the relays in this
+            # partition set.
+            relays = [self.relays[i] for i
+                      in random.sample(relay_partition, len(relay_partition))]
+
+            # order partition by bandwidth and divide it in 50 relays slices
+            relays.sort(key=operator.attrgetter('bandwidth'))
+            slices = [relays[i:i + self._slice_width] for i in
+                      range(0, len(relays), self._slice_width)]
+            log.debug("Using {num_slices} slices of width {slice_width}",
+                      num_slices=len(slices), slice_width=self._slice_width)
+            # for every slice
+            for s in slices:
+                exits = [e for e in s if is_valid_exit(e)]
+                for i in range(0, len(s)):
+                    # take a random relay from the slice
+                    relay = random.choice(s)
+                    # remove it from the slice so it is not chosen again
+                    s.remove(relay)
+                    # take a random exit from the slice
+                    exit = random.choice([e for e in exits if e is not relay])
+                    # but do not remove it as it can be used again
+                    log.debug("Chosen relay and exit.")
+                    yield relay, exit
+
+        self._circgen = circuit_generator()
 
     def next(self):
         return self._circgen.next()
