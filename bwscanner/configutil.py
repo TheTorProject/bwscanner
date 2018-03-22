@@ -1,6 +1,6 @@
 import os.path
-from shutil import copyfile
 from ConfigParser import SafeConfigParser
+from pkg_resources import resource_string
 
 from bwscanner.logger import log
 
@@ -21,8 +21,12 @@ def config_exists(cfg_path):
 
 
 def copy_config(cfg_path, cfg_default_path=None):
+    # FIXME: obtain the path instead of the content
     if cfg_default_path is None:
-        cfg_default_path = os.path.join(os.path.dirname(os.path.dirname(
-                os.path.abspath(__file__))), 'data', 'config.ini')
+        content = resource_string(__name__, 'data/config.ini')
+    else:
+        with open(cfg_default_path) as fp:
+            content = cfg_default_path.read()
     log.debug("cfg_default_path %s" % cfg_default_path)
-    copyfile(cfg_default_path, cfg_path)
+    with open(cfg_path, 'w') as fp:
+        fp.write(content)

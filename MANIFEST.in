@@ -1,1 +1,1 @@
-include README LICENSE requirements.txt
+include README.rst requirements.txt bwscanner/data/config.ini
