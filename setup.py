@@ -1,11 +1,22 @@
+import os.path
 from setuptools import setup, find_packages
 
-__version__ = '0.0.1'
+
+def get_version():
+    with open(os.path.join("bwscanner", "__init__.py")) as f:
+        for line in f:
+            if "__version__" in line.strip():
+                version = line.split("=", 1)[1].strip().strip('"')
+                return version
+
+
+__version__ = get_version()
 __author__ = 'aagbsn'
 __contact__ = 'aagbsn@torproject.org'
 __url__ = 'https://github.com/TheTorProject/bwscanner'  # TODO: publish this
 __license__ = 'GPL'
 __copyright__ = ''
+
 
 setup(name='bwscanner',  # TODO: pick a better name
       version=__version__,

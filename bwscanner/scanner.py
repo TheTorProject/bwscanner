@@ -9,9 +9,7 @@ from bwscanner.attacher import connect_to_tor
 from bwscanner.logger import setup_logging, log
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
-
-
-BWSCAN_VERSION = '0.0.1'
+from bwscanner import __version__
 
 
 class ScanInstance(object):
@@ -43,7 +41,7 @@ pass_scan = click.make_pass_decorator(ScanInstance)
               help='Launch Tor or try to connect to an existing Tor instance.')
 @click.option('--circuit-build-timeout', default=20,
               help='Option passed when launching Tor.')
-@click.version_option(BWSCAN_VERSION)
+@click.version_option(__version__)
 @click.pass_context
 def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
     """
