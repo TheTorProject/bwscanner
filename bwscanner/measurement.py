@@ -6,9 +6,8 @@ from stem.descriptor.networkstatus import RouterStatusEntryV3
 from twisted.internet import defer
 
 from bwscanner.logger import log
-from bwscanner.attacher import SOCKSClientStreamAttacher
 from bwscanner.circuit import TwoHop
-from bwscanner.fetcher import OnionRoutedAgent, hashingReadBody
+from bwscanner.fetcher import hashingReadBody, fetch
 from bwscanner.writer import ResultSink
 
 # defer.setDebugging(True)
@@ -31,6 +30,7 @@ class BwScan(object):
         this_partition: which partition of circuit we will process
         """
         self.state = state
+        self._socks = None
         self.clock = clock
         self.measurement_dir = measurement_dir
         self.partitions = kwargs.get('partitions', 1)
@@ -54,9 +54,6 @@ class BwScan(object):
         }
 
         self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
-
-        # Add a stream attacher
-        self.state.set_attacher(SOCKSClientStreamAttacher(self.state), clock)
 
     def now(self):
         return time.time()
@@ -162,14 +159,13 @@ class BwScan(object):
                 return result
             deferred.addBoth(gotResult)
 
-        agent = OnionRoutedAgent(self.clock, path=path, state=self.state)
-        request = agent.request("GET", url)
-        request.addCallback(hashingReadBody)  # returns a readBody Deferred
-        timeoutDeferred(request, self.request_timeout)
-        request.addCallbacks(get_circuit_bw)
-        request.addErrback(circ_failure)
-        request.addCallback(self.result_sink.send)
-        return request
+        d = fetch(self.state, path, url)
+        d.addCallback(hashingReadBody)
+        timeoutDeferred(d, self.request_timeout)
+        d.addCallbacks(get_circuit_bw)
+        d.addErrback(circ_failure)
+        d.addCallback(self.result_sink.send)
+        return d
 
     @defer.inlineCallbacks
     def get_r_ns_bw(self, router):

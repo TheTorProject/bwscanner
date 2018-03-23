@@ -28,6 +28,8 @@ class TestBwscan(TorTestCase):
                     size = int(size[:-1])*(2**10)
                 elif 'M' in size:
                     size = int(size[:-1])*(2**20)
+                # FIXME: to simplify test, return always same data no matter what the size is
+                return 'a'
                 return 'a'*size
 
         self.port = yield available_tcp_port(reactor)
@@ -39,6 +41,15 @@ class TestBwscan(TorTestCase):
         self.tmp = mkdtemp()
         scan = BwScan(self.tor_state, reactor, self.tmp)
         scan.baseurl = 'http://127.0.0.1:{}'.format(self.port)
+        # FIXME: to simplify test, use same data and hash, no matter what the file size is
+        scan.bw_files = {
+            64*1024: ("64M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            32*1024: ("32M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            16*1024: ("16M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            8*1024: ("8M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            4*1024: ("4M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            2*1024: ("2M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+        }
 
         def check_all_routers_measured(measurement_dir):
             """

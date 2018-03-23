@@ -2,9 +2,7 @@ import datetime
 import json
 import re
 import sys
-from bwscanner.attacher import SOCKSClientStreamAttacher, start_tor
-from bwscanner.circuit import ExitScan
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.attacher import start_tor
 from twisted.internet import defer, reactor, task
 from twisted.python import log
 from twisted.web.client import readBody
@@ -57,20 +55,20 @@ def run_scan(state):
 def shutdown(ignore):
     reactor.stop()
 
-def add_attacher(state):
-    state.set_attacher(SOCKSClientStreamAttacher(state), reactor)
-    return state
-
 def setup_failed(failure):
     log.err(failure)
 
 def save_results(result, outfile):
     outfile.write(json.dumps(dict([r[1] for r in result if r[1] != None])))
 
+@defer.inlineCallbacks
+def socks(state):
+    s = yield get_tor_socks_endpoint(state)
+    defer.returnValue(s)
+
 def main():
     log.startLogging(sys.stdout)
     tor = start_tor(TorConfig())
-    tor.addCallback(add_attacher)
     tor.addCallback(run_scan)
     tor.addErrback(log.err)
     tor.addBoth(shutdown)

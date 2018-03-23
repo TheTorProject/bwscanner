@@ -5,7 +5,7 @@ from twisted.internet import defer, reactor
 from twisted.trial import unittest
 
 from bwscanner import circuit
-from bwscanner.attacher import SOCKSClientStreamAttacher, connect_to_tor
+from bwscanner.attacher import connect_to_tor
 
 
 class TorTestCase(unittest.TestCase):
@@ -17,9 +17,6 @@ class TorTestCase(unittest.TestCase):
                 control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')),
                 circuit_build_timeout=30,
         )
-
-        self.attacher = SOCKSClientStreamAttacher(self.tor_state)
-        yield self.tor_state.set_attacher(self.attacher, reactor)
 
     @property
     def routers(self):

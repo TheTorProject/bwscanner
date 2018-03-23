@@ -7,7 +7,7 @@ from txtorcon.circuit import Circuit
 from txtorcon.util import available_tcp_port
 
 from bwscanner.listener import CircuitEventListener, StreamBandwidthListener
-from bwscanner.fetcher import OnionRoutedAgent
+from bwscanner.fetcher import fetch
 from test.template import TorTestCase
 
 import random
@@ -37,7 +37,8 @@ class TestCircuitEventListener(TorTestCase):
     @defer.inlineCallbacks
     def test_circuit_lifecycle(self):
         path = self.random_path()
-        circ = yield self.attacher.create_circuit('127.0.0.1', 1234, path)
+        circ = yield self.tor_state.build_circuit(path, False)
+        yield circ.when_built()
         self.assertIsInstance(circ, Circuit)
         self.assertEqual(circ.path, path)
         circuit_lifecycle = self.circuit_event_listener.circuits[circ]
@@ -132,9 +133,8 @@ class TestStreamBandwidthListener(TorTestCase):
     def do_fetch(self):
         time_start = time.time()
         path = self.random_path()
-        agent = OnionRoutedAgent(reactor, path=path, state=self.tor_state)
         url = "http://127.0.0.1:{}".format(self.port)
-        request = yield agent.request("GET", url)
+        request = yield fetch(self.tor_state, path, url)
         body = yield readBody(request)
         assert len(body) == self.fetch_size
         circ = [c for c in self.tor_state.circuits.values() if c.path == path][0]
