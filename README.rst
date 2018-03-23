@@ -115,5 +115,6 @@ Contact
 License
 --------
 
-BWScanner is Copyright 2016, 2018 by its authors under the terms of the
-`GPLv2 <https://www.gnu.org/licenses/>`__ license.
+Copyright 2016 Aaron Gibson, Donncha Ó Cearbhaill, David Stainton,
+Copyright 2018 Aaron Gibson, juga, Donncha Ó Cearbhaill
+under the terms of the `GPLv2 <https://www.gnu.org/licenses/>`__ license.
