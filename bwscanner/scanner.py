@@ -6,22 +6,30 @@ import click
 from twisted.internet import reactor
 
 from bwscanner.attacher import connect_to_tor
+from bwscanner.configutil import read_config
 from bwscanner.logger import setup_logging, log
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
 
 
 BWSCAN_VERSION = '0.0.1'
+APP_NAME = 'bwscanner'
+DATA_DIR = os.environ.get("BWSCANNER_DATADIR", click.get_app_dir(APP_NAME))
+CONFIG_FILE = 'config.ini'
+LOG_FILE = 'bwscanner.log'
 
 
 class ScanInstance(object):
     """
     Store the configuration and state for the CLI tool.
     """
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, measurement_dir=None):
         self.data_dir = data_dir
-        self.measurement_dir = os.path.join(data_dir, 'measurements')
-        self.tor_dir = os.path.join(data_dir, 'tor_data')
+        if measurement_dir is None:
+            self.measurement_dir = os.path.join(data_dir, 'measurements')
+        else:
+            self.measurement_dir = measurement_dir
+        self.tor_state = None
 
     def __repr__(self):
         return '<BWScan %r>' % self.data_dir
@@ -30,18 +38,22 @@ class ScanInstance(object):
 pass_scan = click.make_pass_decorator(ScanInstance)
 
 
+# FIXME: check these errors
+# pylint: disable=unexpected-keyword-arg
+# pylint: disable=no-value-for-parameter
 @click.group()
 @click.option('--data-dir', type=click.Path(),
-              default=os.environ.get("BWSCANNER_DATADIR", click.get_app_dir('bwscanner')),
               help='Directory where bwscan should stores its measurements and '
               'other data.')
-@click.option('-l', '--loglevel', help='The logging level the scanner will use (default: info)',
-              default='info', type=click.Choice(['debug', 'info', 'warn', 'error', 'critical']))
-@click.option('-f', '--logfile', type=click.Path(), help='The file the log will be written to',
-              default=os.environ.get("BWSCANNER_LOGFILE", 'bwscanner.log'))
-@click.option('--launch-tor/--no-launch-tor', default=False,
+@click.option('-l', '--loglevel',
+              help='The logging level the scanner will use (default: info)',
+              type=click.Choice(
+                      ['debug', 'info', 'warn', 'error', 'critical']))
+@click.option('-f', '--logfile', type=click.Path(),
+              help='The file the log will be written to')
+@click.option('--launch-tor/--no-launch-tor',
               help='Launch Tor or try to connect to an existing Tor instance.')
-@click.option('--circuit-build-timeout', default=20,
+@click.option('--circuit-build-timeout',
               help='Option passed when launching Tor.')
 @click.version_option(BWSCAN_VERSION)
 @click.pass_context
@@ -51,9 +63,12 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
     bandwidth measurements can then be aggregate to create the bandwidth
     values used by the Tor bandwidth authorities when creating the Tor consensus.
     """
+    for k, v in ctx.default_map.items():
+        if ctx.params.get(k) is None:
+            ctx.params[k] = v
+
     # Create the data directory if it doesn't exist
-    data_dir = os.path.abspath(data_dir)
-    ctx.obj = ScanInstance(data_dir)
+    ctx.obj = ScanInstance(ctx.params.get('data_dir'))
 
     if not os.path.isdir(ctx.obj.measurement_dir):
         os.makedirs(ctx.obj.measurement_dir)
@@ -63,7 +78,8 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
                                        ctx.obj.tor_dir)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
-    setup_logging(log_level=loglevel, log_name=logfile)
+    setup_logging(log_level=ctx.params.get('loglevel'),
+                  log_name=ctx.params.get('logfile'))
 
 
 @cli.command(short_help="Measure the Tor relays.")
@@ -85,7 +101,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
 
     # XXX: check that each run is producing the same input set!
     scan_time = str(int(time.time()))
-    scan_data_dir = os.path.join(scan.measurement_dir, '{}.running'.format(scan_time))
+    scan_data_dir = os.path.join(scan.measurement_dir,
+                                 '{}.running'.format(scan_time))
     if not os.path.isdir(scan_data_dir):
         os.makedirs(scan_data_dir)
 
@@ -160,3 +177,8 @@ def aggregate(scan, scan_name, previous):
     scan.tor_state.addErrback(lambda failure: log.failure("Unexpected error"))
     scan.tor_state.addCallback(lambda _: reactor.stop())
     reactor.run()
+
+
+def start():
+    config = read_config(os.path.join(DATA_DIR, CONFIG_FILE))
+    return cli(default_map=config)

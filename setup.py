@@ -39,9 +39,9 @@ setup(name='bwscanner',  # TODO: pick a better name
       },
       python_requires=">=2.7",
       # data_files = [('path', ['filename'])]
-      data_files=[],
+      include_package_data=True,
       entry_points={
         "console_scripts": [
-            'bwscan = bwscanner.scanner:cli',
+            'bwscan = bwscanner.scanner:start',
         ]},
      )
