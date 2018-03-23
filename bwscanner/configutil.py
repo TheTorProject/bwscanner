@@ -6,14 +6,28 @@ from bwscanner.logger import log
 
 
 def read_config(cfg_path):
-    log.debug('reading config %s' % cfg_path)
+    log.debug('Reading config %s' % cfg_path)
     if not config_exists(cfg_path):
         copy_config(cfg_path)
     parser = SafeConfigParser()
     parser.read([cfg_path])
-    # FIXME: handle section names
-    section = 'default'
-    return dict(parser.items(section))
+    cfg_dict = dict(parser.items('default'))
+    int_keys = cfg_dict['int_keys'].split(' ')
+    bool_keys = cfg_dict['bool_keys'].split(' ')
+    for k in int_keys:
+        cfg_dict[k] = int(cfg_dict[k])
+    for i in bool_keys:
+        cfg_dict[k] = bool(cfg_dict[k])
+    bw_files = dict(parser.items('bw_files'))
+    cfg_bw_files = {}
+    for k, v in bw_files.items():
+        print(k, v)
+        if 'm' in k:
+            number = k.rstrip('m')
+            size = 1024 * int(number)
+            cfg_bw_files[size] = (k.upper(), v)
+    cfg_dict['bw_files'] = cfg_bw_files
+    return cfg_dict
 
 
 def config_exists(cfg_path):

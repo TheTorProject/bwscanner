@@ -42,6 +42,6 @@ setup(name='bwscanner',  # TODO: pick a better name
       include_package_data=True,
       entry_points={
         "console_scripts": [
-            'bwscan = bwscanner.scanner:cli',
+            'bwscan = bwscanner.scanner:start',
         ]},
      )
