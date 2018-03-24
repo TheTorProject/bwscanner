@@ -9,6 +9,7 @@ from bwscanner.attacher import connect_to_tor
 from bwscanner.logger import setup_logging, log
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
+from bwscanner.config import TOR_OPTIONS
 from bwscanner import __version__
 
 
@@ -58,7 +59,7 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
 
     # Create a connection to a Tor instance
     ctx.obj.tor_state = connect_to_tor(launch_tor, circuit_build_timeout,
-                                       ctx.obj.tor_dir)
+                                       TOR_OPTIONS, ctx.obj.tor_dir)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
     setup_logging(log_level=loglevel, log_name=logfile)

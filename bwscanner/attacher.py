@@ -31,26 +31,16 @@ def wait_for_newconsensus(tor_state):
 
 
 @defer.inlineCallbacks
-def connect_to_tor(launch_tor, circuit_build_timeout, tor_dir=None, control_port=None,
+def connect_to_tor(launch_tor, circuit_build_timeout, tor_options,
+                   tor_dir=None, control_port=None,
                    tor_overrides=None):
     """
     Launch or connect to a Tor instance
 
     Configure Tor with the passed options and return a Deferred
     """
+    # FIXME: tor_overrides should probably be removed
     # Options for spawned or running Tor to load the correct descriptors.
-    tor_options = {
-        'LearnCircuitBuildTimeout': 0,  # Disable adaptive circuit timeouts.
-        'CircuitBuildTimeout': circuit_build_timeout,
-        'UseEntryGuards': 0,  # Disable UseEntryGuards to avoid PathBias warnings.
-        'UseMicroDescriptors': 0,
-        'FetchUselessDescriptors': 1,
-        'FetchDirInfoEarly': 1,
-        'FetchDirInfoExtraEarly': 1,
-        'SafeLogging': 0,
-        'LogTimeGranularity': 1,
-    }
-
     if tor_overrides:
         tor_options.update(tor_overrides)
 
