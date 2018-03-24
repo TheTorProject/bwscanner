@@ -3,7 +3,7 @@
 import os.path
 import click
 
-default = {
+DEFAULT = {
     'data_dir': click.get_app_dir('bwscanner'),
     'measurement_dir': os.path.join(click.get_app_dir('bwscanner'),
                                     'measurements'),
@@ -20,7 +20,7 @@ default = {
     'timeout': 120,
     'request_limit': 10
 }
-bw_files = {
+BW_FILES = {
     64*1024: ("64M", "6258de4f4d602be75a3458117b29d2c580c4bcb7ba5b9d2c4135c7603109f554"),
     32*1024: ("32M", "5a5d66d7865f09498d776f20c9e9791b055a4fff357185f84fb4ecfca7da93f0"),
     16*1024: ("(16M", "6258de4f4d602be75a3458117b29d2c580c4bcb7ba5b9d2c4135c7603109f554"),
