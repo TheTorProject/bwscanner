@@ -28,11 +28,12 @@ def random_path_to_exit(exit_relay, relays):
     return candidate_relays[0:2] + [exit_relay]
 
 
+# pylint: disable=no-member
 class CircuitGenerator(object):
     def __init__(self, state):
         self.state = state
         # FIXME: don't we want to remove the exits from the list of relays?
-        self.relays = list(set(r for r in state.routers.values() if r))
+        self.relays = list(set(r for r in list(state.routers.values()) if r))
         self.exits = [relay for relay in self.relays if is_valid_exit(relay)]
 
     def __iter__(self):
@@ -41,7 +42,11 @@ class CircuitGenerator(object):
     def next(self):
         raise NotImplementedError
 
+    def __next__(self):
+        return self.next()
 
+
+# pylint: disable=no-member
 class TwoHop(CircuitGenerator):
     """
     Select two hop circuits with the relay to be measured and a random exit
@@ -63,7 +68,7 @@ class TwoHop(CircuitGenerator):
             choose an exit relay of similar bandwidth for the circuit
             """
             num_relays = len(self.relays)
-            relay_subset = range(this_partition-1, num_relays, partitions)
+            relay_subset = list(range(this_partition-1, num_relays, partitions))
             log.info("Performing a measurement scan with {count} relays.", count=len(relay_subset))
 
             # Choose relays in a random order fromm the relays in this partition set.
@@ -108,3 +113,6 @@ class TwoHop(CircuitGenerator):
 
     def next(self):
         return self._circgen.next()
+
+    def __next__(self):
+        return self.next()

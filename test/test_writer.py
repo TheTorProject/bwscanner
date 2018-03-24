@@ -19,7 +19,7 @@ class TestResultSink(unittest.TestCase):
         test_data = {'test_method': 'test_send_chunk_size'}
         num_chunks = randint(121, 212)
         deferreds = []
-        for _ in xrange(chunk_size*num_chunks):
+        for _ in range(chunk_size*num_chunks):
             deferreds += [self.result_sink.send(test_data)]
 
         def validate(_, dirname, fnames):
@@ -42,7 +42,7 @@ class TestResultSink(unittest.TestCase):
         self.result_sink = ResultSink(self.tmpdir, chunk_size=chunk_size)
         test_data = {'test_method': 'test_send_chunk_size'}
         deferreds = []
-        for _ in xrange(chunk_size):
+        for _ in range(chunk_size):
             deferreds += [self.result_sink.send(test_data)]
 
         def validate(_, dirname, fnames):
@@ -65,7 +65,7 @@ class TestResultSink(unittest.TestCase):
         self.result_sink = ResultSink(self.tmpdir, chunk_size=chunk_size)
         test_data = {'test_method': 'test_send_chunk_size'}
         deferreds = []
-        for _ in xrange(chunk_size + 3):
+        for _ in range(chunk_size + 3):
             deferreds += [self.result_sink.send(test_data)]
 
         def validate(_, dirname, fnames):

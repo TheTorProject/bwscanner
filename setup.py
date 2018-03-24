@@ -33,6 +33,7 @@ setup(name='bwscanner',  # TODO: pick a better name
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
         'Topic :: System :: Networking',
         'Topic :: Internet :: Proxy Servers',
         'Topic :: Internet',
@@ -48,7 +49,6 @@ setup(name='bwscanner',  # TODO: pick a better name
         'test': ['tox', 'pytest'],
         'doc': ['sphinx', 'pylint']
       },
-      python_requires=">=2.7",
       # data_files = [('path', ['filename'])]
       data_files=[],
       entry_points={
