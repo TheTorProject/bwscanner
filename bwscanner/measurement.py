@@ -44,6 +44,9 @@ class BwScan(object):
         self.tasks = []
         self.circuits = None
         self.baseurl = kwargs.get('baseurl')
+        # test does not use baseurl
+        if self.baseurl is not None:
+            assert self.baseurl.endswith('/')
         self.bw_files = kwargs.get('bw_files')
         self.result_sink = ResultSink(self.measurement_dir, chunk_size=10)
 
@@ -64,7 +67,7 @@ class BwScan(object):
         return max(self.bw_files.keys())
 
     def choose_url(self, path):
-        return self.baseurl + '/' + self.bw_files[self.choose_file_size(path)][0]
+        return self.baseurl + self.bw_files[self.choose_file_size(path)][0]
 
     def run_scan(self):
         all_done = defer.Deferred()

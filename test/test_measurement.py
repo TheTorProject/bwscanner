@@ -40,7 +40,7 @@ class TestBwscan(TorTestCase):
         # check that each run is producing the same input set!
         self.tmp = mkdtemp()
         scan = BwScan(self.tor_state, reactor, self.tmp)
-        scan.baseurl = 'http://127.0.0.1:{}'.format(self.port)
+        scan.baseurl = 'http://127.0.0.1:{}/'.format(self.port)
         # FIXME: to simplify test, use same data and hash, no matter what the file size is
         scan.bw_files = {
             64*1024: ("64M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
