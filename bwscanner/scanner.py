@@ -9,6 +9,7 @@ from bwscanner.attacher import connect_to_tor
 from bwscanner.logger import setup_logging, log
 from bwscanner.measurement import BwScan
 from bwscanner.aggregate import write_aggregate_data
+from bwscanner.config import TOR_OPTIONS, DEFAULT, BW_FILES
 from bwscanner import __version__
 
 
@@ -58,7 +59,7 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
 
     # Create a connection to a Tor instance
     ctx.obj.tor_state = connect_to_tor(launch_tor, circuit_build_timeout,
-                                       ctx.obj.tor_dir)
+                                       TOR_OPTIONS, ctx.obj.tor_dir)
 
     # Set up the logger to only output log lines of level `loglevel` and above.
     setup_logging(log_level=loglevel, log_name=logfile)
@@ -74,13 +75,15 @@ def cli(ctx, data_dir, loglevel, logfile, launch_tor, circuit_build_timeout):
 @click.option('--request-limit', default=10,
               help='Limit the number of simultaneous bandwidth measurements '
               '(default: %d).' % 10)
+@click.option('--baseurl', default=DEFAULT.get('baseurl'),
+              help='File server URL')
 @pass_scan
-def scan(scan, partitions, current_partition, timeout, request_limit):
+def scan(scan, partitions, current_partition, timeout, request_limit, baseurl):
     """
     Start a scan through each Tor relay to measure it's bandwidth.
     """
     log.info("Using {data_dir} as the data directory.", data_dir=scan.data_dir)
-
+    assert isinstance(BW_FILES, dict)
     # XXX: check that each run is producing the same input set!
     scan_time = str(int(time.time()))
     scan_data_dir = os.path.join(scan.measurement_dir, '{}.running'.format(scan_time))
@@ -92,6 +95,8 @@ def scan(scan, partitions, current_partition, timeout, request_limit):
         os.rename(scan_data_dir, os.path.join(scan.measurement_dir, scan_time))
 
     scan.tor_state.addCallback(BwScan, reactor, scan_data_dir,
+                               baseurl=baseurl,
+                               bw_files=BW_FILES,
                                request_timeout=timeout,
                                request_limit=request_limit,
                                partitions=partitions,

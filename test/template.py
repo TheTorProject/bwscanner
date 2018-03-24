@@ -6,6 +6,7 @@ from twisted.trial import unittest
 
 from bwscanner import circuit
 from bwscanner.attacher import connect_to_tor
+from bwscanner.config import TOR_OPTIONS
 
 
 class TorTestCase(unittest.TestCase):
@@ -16,6 +17,7 @@ class TorTestCase(unittest.TestCase):
                 launch_tor=False,
                 control_port=int(os.environ.get('CHUTNEY_CONTROL_PORT')),
                 circuit_build_timeout=30,
+                tor_options=TOR_OPTIONS
         )
 
     @property
