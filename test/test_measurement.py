@@ -43,12 +43,12 @@ class TestBwscan(TorTestCase):
         scan.baseurl = 'http://127.0.0.1:{}/'.format(self.port)
         # FIXME: to simplify test, use same data and hash, no matter what the file size is
         scan.bw_files = {
-            64*1024: ("64M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
-            32*1024: ("32M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
-            16*1024: ("16M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
-            8*1024: ("8M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
-            4*1024: ("4M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
-            2*1024: ("2M", '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'),
+            64*1024: ("64M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+            32*1024: ("32M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+            16*1024: ("16M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+            8*1024: ("8M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+            4*1024: ("4M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+            2*1024: ("2M", 'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
         }
 
         def check_all_routers_measured(measurement_dir):

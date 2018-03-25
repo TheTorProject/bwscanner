@@ -46,7 +46,7 @@ class hashingReadBodyProtocol(protocol.Protocol):
         self.deferred = deferred
         self.status = status
         self.message = message
-        self.hash_state = hashlib.sha1()
+        self.hash_state = hashlib.sha256()
 
     def dataReceived(self, data):
         """
