@@ -4,6 +4,7 @@ import glob
 import json
 
 from twisted.internet.defer import inlineCallbacks
+from txtorcon.torcontrolprotocol import TorProtocolError
 from stem.descriptor.server_descriptor import RelayDescriptor
 from stem.descriptor.router_status_entry import RouterStatusEntryV3
 
