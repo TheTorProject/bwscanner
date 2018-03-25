@@ -1,4 +1,5 @@
 import time
+import unicodedata
 
 from stem.descriptor.server_descriptor import ServerDescriptor
 from stem.descriptor.networkstatus import RouterStatusEntryV3
@@ -67,7 +68,8 @@ class BwScan(object):
         return max(self.bw_files.keys())
 
     def choose_url(self, path):
-        return self.baseurl + self.bw_files[self.choose_file_size(path)][0]
+        url = self.baseurl + self.bw_files[self.choose_file_size(path)][0]
+        return unicodedata.normalize('NFKD', url).encode('ascii', 'ignore')
 
     def run_scan(self):
         all_done = defer.Deferred()
