@@ -4,6 +4,7 @@ import glob
 import json
 
 from twisted.internet.defer import inlineCallbacks
+from txtorcon.torcontrolprotocol import TorProtocolError
 from stem.descriptor.server_descriptor import RelayDescriptor
 from stem.descriptor.router_status_entry import RouterStatusEntryV3
 
@@ -65,8 +66,13 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
             log.debug("Could not calculate a valid filtered bandwidth, skipping relay.")
             continue
 
-        routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp.lstrip("$"))
-        descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp.lstrip("$"))
+        try:
+            routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp.lstrip("$"))
+            descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp.lstrip("$"))
+        except TorProtocolError:
+            log.info("Relay {fp} not found in consensus!", fp=relay_fp)
+            continue
+
         relay_routerstatus = RouterStatusEntryV3(routerstatus_info)
         relay_descriptor = RelayDescriptor(descriptor_info)
 
