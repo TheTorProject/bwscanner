@@ -70,7 +70,7 @@ def write_aggregate_data(tor, scan_dirs, file_name="aggregate_measurements"):
             routerstatus_info = yield tor.protocol.get_info_raw('ns/id/' + relay_fp.lstrip("$"))
             descriptor_info = yield tor.protocol.get_info_raw('desc/id/' + relay_fp.lstrip("$"))
         except TorProtocolError:
-            log.info("Relay {} not found in consensus!", relay_fp)
+            log.info("Relay {fp} not found in consensus!", fp=relay_fp)
             continue
 
         relay_routerstatus = RouterStatusEntryV3(routerstatus_info)
