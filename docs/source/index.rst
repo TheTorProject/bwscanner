@@ -10,6 +10,8 @@ Welcome to bwscanner's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   readme_link
+   install_dev
    bwscanner
 
 Indices and tables
