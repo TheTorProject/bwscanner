@@ -10,8 +10,7 @@ Welcome to bwscanner's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   network_partition_detection
-   modules
+   bwscanner
 
 Indices and tables
 ==================
