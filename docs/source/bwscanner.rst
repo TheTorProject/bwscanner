@@ -36,14 +36,6 @@ bwscanner\.fetcher module
     :undoc-members:
     :show-inheritance:
 
-bwscanner\.listener module
---------------------------
-
-.. automodule:: bwscanner.listener
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 bwscanner\.logger module
 ------------------------
 
@@ -56,22 +48,6 @@ bwscanner\.measurement module
 -----------------------------
 
 .. automodule:: bwscanner.measurement
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-bwscanner\.partition\_scan module
----------------------------------
-
-.. automodule:: bwscanner.partition_scan
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-bwscanner\.partition\_shuffle module
-------------------------------------
-
-.. automodule:: bwscanner.partition_shuffle
     :members:
     :undoc-members:
     :show-inheritance:
