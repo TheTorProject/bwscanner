@@ -72,41 +72,6 @@ The final aggregation script is not yet integrated with the CLI. It should be ca
 
     python scripts/aggregate.py ~/.config/bwscanner/measurements/1474278776
 
-
-Development
------------
-
-Unit and integration tests are run automatically for each pull request. The tests must pass before code will be merged. Tox is used to run the tests reproducibly in your development environment.
-
-Tox can be used to create new Python virtual environments with a reproducible state and to run all the tests.
-
-.. code:: bash
-
-    pip install tox
-    git clone https://github.com/TheTorProject/bwscanner.git
-    cd bwscanner
-
-The integration tests are run against a local Tor network which is managed by ``chutney``. You can start ``chutney`` as follows:
-
-
-.. code:: bash
-
-    git clone https://git.torproject.org/chutney.git
-    cd chutney
-    ./chutney stop networks/basic-025
-    ./chutney configure networks/basic-025
-    ./chutney start networks/basic-025
-    ./chutney status networks/basic-025
-    cd ..
-
-The bandwidth scanner needs to be able to connect to a Tor control port to interact with the network. If using ``chutney`` the port ``8021`` should work. Tests are run by simply calling ``tox``.
-
-.. code:: bash
-
-    cd bwscanner
-    export CHUTNEY_CONTROL_PORT=8021
-    tox
-
 Contact
 --------
 
