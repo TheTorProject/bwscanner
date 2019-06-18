@@ -46,7 +46,15 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_options,
 
     if launch_tor:
         log.info("Spawning a new Tor instance.")
-        tor = yield txtorcon.launch(reactor, data_directory=tor_dir)
+        # Create new TorConfig object
+        tor_config = txtorcon.TorConfig()
+        # Update tor config options from dictionary
+        for key, value in tor_options.items():
+            setattr(tor_config, key, value)
+        # Launch tor with config, in order to don't get CONF_CHANGED when
+        # updating options that can't be changed while tor is running.
+        tor = yield txtorcon.launch(reactor, data_directory=tor_dir,
+                                    _tor_config=tor_config)
     else:
         log.info("Trying to connect to a running Tor instance.")
         if control_port:
@@ -54,19 +62,20 @@ def connect_to_tor(launch_tor, circuit_build_timeout, tor_options,
         else:
             endpoint = None
         tor = yield txtorcon.connect(reactor, endpoint)
+        # Get current tor config and update it with our options
+        # TODO: check whether CONF_CHANGED will happen here or not because
+        # FIXME: check that this is the recommended way to change config for
+        # a running tor, and whether the following is also possible
+        # tor._config = tor_config
+        # tor._config.save()
+        tor_config = yield tor.get_config()
+        for key, value in tor_options.items():
+            setattr(tor_config, key, value)
+        yield tor_config.save()  # Send updated options to Tor
 
-    # Get Tor state first to avoid a race conditions where CONF_CHANGED
-    # messages are received while Txtorcon is reading the consensus.
-    tor_state = yield tor.create_state()
-
-    # Get current TorConfig object
-    tor_config = yield tor.get_config()
     wait_for_consensus = options_need_new_consensus(tor_config, tor_options)
 
-    # Update Tor config options from dictionary
-    for key, value in tor_options.items():
-        setattr(tor_config, key, value)
-    yield tor_config.save()  # Send updated options to Tor
+    tor_state = yield tor.create_state()
 
     if wait_for_consensus:
         yield wait_for_newconsensus(tor_state)
