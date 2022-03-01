@@ -7,6 +7,9 @@ BWScanner
 .. image:: https://coveralls.io/repos/github/TheTorProject/bwscanner/badge.svg?branch=develop&reload=1
     :target: https://coveralls.io/github/TheTorProject/bwscanner?branch=develop
 
+.. important:: This software is deprecated in favor of
+   `sbws <https://gitlab.torproject.org/tpo/network-health/sbws>`_
+
 BWScanner is a tool for measuring the bandwidth of Tor relays. Its aim is to replace the existing Torflow system.
 
 This project is still under active development and is not ready for active use or production deployment yet.
